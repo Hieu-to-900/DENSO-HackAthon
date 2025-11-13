@@ -1,61 +1,139 @@
-# New LangGraph Project
+# AI Demand Forecasting System
 
-[![CI](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/unit-tests.yml)
-[![Integration Tests](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/integration-tests.yml)
+An intelligent demand forecasting platform that combines LangGraph-based AI agents with machine learning models to predict product demand, optimize supply chains, and provide actionable business insights.
 
-This template demonstrates a simple application implemented using [LangGraph](https://github.com/langchain-ai/langgraph), designed for showing how to get started with [LangGraph Server](https://langchain-ai.github.io/langgraph/concepts/langgraph_server/#langgraph-server) and using [LangGraph Studio](https://langchain-ai.github.io/langgraph/concepts/langgraph_studio/), a visual debugging IDE.
+## What is this?
 
-<div align="center">
-  <img src="./static/studio_ui.png" alt="Graph view in LangGraph studio UI" width="75%" />
-</div>
+This project is a comprehensive **AI Demand Forecasting System** designed for businesses to predict product demand with high accuracy. The system features:
 
-The core logic defined in `src/agent/graph.py`, showcases an single-step application that responds with a fixed string and the configuration provided.
+### Core Capabilities
 
-You can extend this graph to orchestrate more complex agentic workflows that can be visualized and debugged in LangGraph Studio.
+- **Data Integration & Cleansing**: Automatically pulls and cleans data from multiple sources, preparing it for analysis in minutes instead of days
+- **Pattern Recognition**: Uses AI to identify complex patterns in historical data, including subtle trends that human analysts might miss
+- **Real-time Adjustments**: Continuously monitors market conditions and adjusts forecasts dynamically
+- **Scenario Planning**: Rapidly generates and analyzes multiple demand scenarios to help businesses prepare for various market conditions
 
-## Getting Started
+### Key Features
 
-1. Install dependencies, along with the [LangGraph CLI](https://langchain-ai.github.io/langgraph/concepts/langgraph_cli/), which will be used to run the server.
+1. **Seasonal Demand Prediction**: Analyzes years of historical data to predict seasonal fluctuations with remarkable accuracy, factoring in weather patterns, economic indicators, and social trends
+2. **New Product Forecasting**: Predicts demand for new products by analyzing data from similar product launches, market conditions, and consumer sentiment
+3. **Promotional Impact Analysis**: Quickly assesses the impact of promotions on demand and predicts how different promotional strategies might affect future demand
+4. **Supply Chain Optimization**: Accurately predicts demand to optimize inventory levels, suggest optimal reorder points and quantities, reducing both stockouts and excess inventory
+5. **Competitor Analysis**: Monitors competitor actions and predicts their impact on demand, including pricing changes, new product launches, and marketing campaigns
+
+### Technology Stack
+
+- **Backend**: FastAPI (Python) with LangGraph for AI agent orchestration
+- **Frontend**: React with Recharts for data visualization
+- **AI/ML**: Hybrid approach using LLMs (GPT-4) for reasoning and Prophet/ARIMA for time series forecasting
+- **Data**: Mock data generators for proof of concept (extensible to real data sources)
+
+## How to Install and Run It
+
+### Prerequisites
+
+- Python 3.11 or higher
+- Node.js 18+ and npm
+- OpenAI API key (for LLM features)
+
+### Installation Steps
+
+#### 1. Clone the Repository
 
 ```bash
-cd path/to/your/app
-pip install -e . "langgraph-cli[inmem]"
+git clone <repository-url>
+cd workspace
 ```
 
-2. (Optional) Customize the code and project as needed. Create a `.env` file if you need to use secrets.
+#### 2. Set Up Backend
 
 ```bash
-cp .env.example .env
+# Install Python dependencies
+cd backend
+pip install -r requirements.txt
+
+# Install the agent package
+pip install -e ..
+
+# Create .env file with your API keys
+cp ../.env.example .env
+# Edit .env and add: OPENAI_API_KEY=your_key_here
 ```
 
-If you want to enable LangSmith tracing, add your LangSmith API key to the `.env` file.
+#### 3. Set Up Frontend
 
-```text
-# .env
-LANGSMITH_API_KEY=lsv2...
+```bash
+# Install Node.js dependencies
+cd ../frontend
+npm install
 ```
 
-3. Start the LangGraph Server.
+### Running the Application
 
-```shell
-langgraph dev
+#### Start the Backend Server
+
+```bash
+cd backend
+uvicorn app.main:app --reload --port 8000
 ```
 
-For more information on getting started with LangGraph Server, [see here](https://langchain-ai.github.io/langgraph/tutorials/langgraph-platform/local-server/).
+The API will be available at `http://localhost:8000`
 
-## How to customize
+#### Start the Frontend Development Server
 
-1. **Define runtime context**: Modify the `Context` class in the `graph.py` file to expose the arguments you want to configure per assistant. For example, in a chatbot application you may want to define a dynamic system prompt or LLM to use. For more information on runtime context in LangGraph, [see here](https://langchain-ai.github.io/langgraph/agents/context/?h=context#static-runtime-context).
+In a new terminal:
 
-2. **Extend the graph**: The core logic of the application is defined in [graph.py](./src/agent/graph.py). You can modify this file to add new nodes, edges, or change the flow of information.
+```bash
+cd frontend
+npm run dev
+```
 
-## Development
+The dashboard will be available at `http://localhost:3000`
 
-While iterating on your graph in LangGraph Studio, you can edit past state and rerun your app from previous states to debug specific nodes. Local changes will be automatically applied via hot reload.
+### Quick Start (Both Services)
 
-Follow-up requests extend the same thread. You can create an entirely new thread, clearing previous history, using the `+` button in the top right.
+You can run both services simultaneously:
 
-For more advanced features and examples, refer to the [LangGraph documentation](https://langchain-ai.github.io/langgraph/). These resources can help you adapt this template for your specific use case and build more sophisticated conversational agents.
+**Terminal 1 (Backend):**
+```bash
+cd backend && uvicorn app.main:app --reload --port 8000
+```
 
-LangGraph Studio also integrates with [LangSmith](https://smith.langchain.com/) for more in-depth tracing and collaboration with teammates, allowing you to analyze and optimize your chatbot's performance.
+**Terminal 2 (Frontend):**
+```bash
+cd frontend && npm run dev
+```
+
+### Using the Dashboard
+
+1. Open `http://localhost:3000` in your browser
+2. The dashboard will automatically load data for **Denso EV Inverter**
+3. Use the filters to:
+   - Select different products (when available)
+   - Adjust date ranges
+   - Change forecast modes (comprehensive/seasonal/promotional/new_product)
+   - Set forecast horizon (7-90 days)
+4. View three main sections:
+   - **Main Overview**: Historical sales, forecast visualization, key metrics
+   - **Forecast Analysis**: Seasonal forecasts, scenario comparisons, anomaly detection
+   - **Supply Chain**: Inventory metrics, cost analysis, reorder recommendations
+
+## How to Contribute to the Project
+
+We welcome contributions! Here's how you can help improve the AI Demand Forecasting System.
+
+### Getting Started with Contributions
+
+1. **Fork the Repository**: Create your own fork of the project
+2. **Create a Branch**: Make a new branch for your feature or bug fix
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make Changes**: Implement your changes following the project structure
+4. **Test Your Changes**: Ensure all tests pass and the application runs correctly
+5. **Commit**: Write clear commit messages
+   ```bash
+   git commit -m "Add: Description of your changes"
+   ```
+6. **Push and Create Pull Request**: Push your branch and create a PR
 
