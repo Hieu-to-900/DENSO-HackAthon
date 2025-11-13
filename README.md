@@ -6,6 +6,8 @@ An intelligent demand forecasting platform that combines LangGraph-based AI agen
 
 This project is a comprehensive **AI Demand Forecasting System** designed for businesses to predict product demand with high accuracy. The system features:
 
+![Workflow](./docs/images/image.png)
+
 ### Core Capabilities
 
 - **Data Integration & Cleansing**: Automatically pulls and cleans data from multiple sources, preparing it for analysis in minutes instead of days
