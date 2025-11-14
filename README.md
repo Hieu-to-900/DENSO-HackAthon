@@ -72,6 +72,14 @@ npm install
 
 ### Running the Application
 
+#### Start LangGraph for development
+
+```bash
+langgraph dev
+```
+
+You can see the UI Studio at LangSmith or local at http://127.0.0.1:2024
+
 #### Start the Backend Server
 
 ```bash
