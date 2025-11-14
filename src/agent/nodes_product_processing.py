@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 import os
 import re
+from datetime import datetime, timedelta
 from typing import Any, Dict
 
 import chromadb
 import openai
+import pandas as pd
 from dotenv import load_dotenv
 from langgraph.runtime import Runtime
+from prophet import Prophet
 
 from agent.internal_data_mock import (
     get_all_product_codes,
@@ -422,37 +425,165 @@ async def generate_forecast(
     state: State,
     runtime: Runtime[Context],
 ) -> Dict[str, Any]:
-    """Generate demand forecast using ML model.
+    """Generate demand forecast using Prophet model.
 
     Input: Product code, fused data
     Output: Forecast (units) for next quarter
 
-    Purpose: Run local ML model (e.g., Prophet, LSTM) or rule-based adjustment to predict demand.
+    Purpose: Run Prophet model with market insights to predict demand for next 3 months.
     """
-    # Mock forecast generation - replace with actual Prophet/LSTM model
-    # In real implementation, would:
-    # 1. Prepare features from fused_data
-    # 2. Run Prophet/LSTM model
-    # 3. Generate forecast for next quarter
-
-    historical_sales = fused_data["internal_data"]["historical_sales"]
-    avg_sales = sum(historical_sales) / len(historical_sales)
-
-    # Simple forecast with market adjustment
-    market_factor = 1.15 if "increasing" in str(fused_data["combined_features"]["market_signal"]) else 1.0
-    forecast_units = int(avg_sales * market_factor * 90)  # 90 days in quarter
-
-    forecast = {
-        "product_code": product_code,
-        "forecast_period": "Q1_2025",
-        "forecast_units": forecast_units,
-        "confidence_interval": {
-            "lower": int(forecast_units * 0.85),
-            "upper": int(forecast_units * 1.15),
-        },
-        "method": "prophet_with_market_adjustment",
-        "forecast_timestamp": "2024-10-15T10:15:00",
-    }
+    try:
+        from prophet import Prophet
+        import pandas as pd
+        from datetime import datetime, timedelta
+        
+        # Extract historical sales data (full 36 months)
+        historical_sales_full = fused_data["internal_data"].get("historical_sales_full", [])
+        
+        if not historical_sales_full or len(historical_sales_full) < 12:
+            # Fallback to simple forecast if insufficient data
+            raise ValueError("Insufficient historical data for Prophet model")
+        
+        # Prepare data for Prophet (requires 'ds' and 'y' columns)
+        df_data = []
+        for sale in historical_sales_full:
+            if sale["quantity"] > 0:  # Skip zero sales (before product launch)
+                df_data.append({
+                    "ds": pd.to_datetime(sale["period"] + "-01"),  # Convert YYYY-MM to date
+                    "y": sale["quantity"]
+                })
+        
+        if len(df_data) < 12:
+            raise ValueError("Insufficient non-zero sales data for Prophet model")
+        
+        df = pd.DataFrame(df_data)
+        
+        # Initialize Prophet model with optimized parameters
+        model = Prophet(
+            yearly_seasonality=True,
+            weekly_seasonality=False,
+            daily_seasonality=False,
+            seasonality_mode='multiplicative',  # Better for sales data with growth
+            changepoint_prior_scale=0.05,  # Control overfitting
+            interval_width=0.80  # 80% confidence intervals
+        )
+        
+        # Add market insight as regressor if available
+        market_confidence = fused_data["market_insight"].get("confidence", 0.5)
+        market_signals = fused_data["combined_features"].get("market_signal", [])
+        
+        # Determine market growth factor from key findings
+        market_growth_factor = 1.0
+        if market_signals:
+            growth_keywords = ["growth", "increasing", "rising", "up", "surge", "demand"]
+            decline_keywords = ["declining", "decreasing", "down", "falling", "weak"]
+            
+            signal_text = " ".join(market_signals).lower()
+            
+            if any(keyword in signal_text for keyword in growth_keywords):
+                market_growth_factor = 1.0 + (market_confidence * 0.15)  # Up to 15% increase
+            elif any(keyword in signal_text for keyword in decline_keywords):
+                market_growth_factor = 1.0 - (market_confidence * 0.10)  # Up to 10% decrease
+        
+        # Fit the model
+        model.fit(df)
+        
+        # Create future dataframe for next 3 months (Q1 2025)
+        future = model.make_future_dataframe(periods=3, freq='MS')  # MS = month start
+        
+        # Generate forecast
+        forecast_df = model.predict(future)
+        
+        # Extract forecast for next 3 months only
+        forecast_months = forecast_df.tail(3)
+        
+        # Apply market adjustment factor
+        monthly_forecasts = []
+        total_forecast = 0
+        
+        for idx, row in forecast_months.iterrows():
+            adjusted_forecast = row['yhat'] * market_growth_factor
+            adjusted_lower = row['yhat_lower'] * market_growth_factor
+            adjusted_upper = row['yhat_upper'] * market_growth_factor
+            
+            monthly_forecasts.append({
+                "month": row['ds'].strftime("%Y-%m"),
+                "forecast": max(0, int(adjusted_forecast)),
+                "lower": max(0, int(adjusted_lower)),
+                "upper": max(0, int(adjusted_upper)),
+            })
+            total_forecast += max(0, int(adjusted_forecast))
+        
+        # Calculate overall confidence interval
+        lower_total = sum([m["lower"] for m in monthly_forecasts])
+        upper_total = sum([m["upper"] for m in monthly_forecasts])
+        
+        forecast = {
+            "product_code": product_code,
+            "forecast_period": "Q1_2025",
+            "forecast_units": total_forecast,
+            "monthly_breakdown": monthly_forecasts,
+            "confidence_interval": {
+                "lower": lower_total,
+                "upper": upper_total,
+            },
+            "method": "prophet_with_market_adjustment",
+            "market_growth_factor": round(market_growth_factor, 3),
+            "model_confidence": round(market_confidence, 3),
+            "forecast_timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        
+    except Exception as e:
+        # Fallback to simple rule-based forecast if Prophet fails
+        print(f"Prophet model failed for {product_code}: {e}. Using fallback forecast.")
+        
+        historical_sales = fused_data["internal_data"].get("historical_sales", [100, 100, 100, 100, 100])
+        
+        # Calculate trend from recent data
+        if len(historical_sales) >= 3:
+            recent_avg = sum(historical_sales[-3:]) / 3
+            older_avg = sum(historical_sales[:3]) / 3 if len(historical_sales) >= 6 else recent_avg
+            
+            if older_avg > 0:
+                trend_factor = recent_avg / older_avg
+            else:
+                trend_factor = 1.0
+        else:
+            recent_avg = sum(historical_sales) / len(historical_sales)
+            trend_factor = 1.0
+        
+        # Apply market adjustment
+        market_signals = fused_data["combined_features"].get("market_signal", [])
+        signal_text = " ".join(market_signals).lower()
+        
+        if "growth" in signal_text or "increasing" in signal_text:
+            market_factor = 1.15
+        elif "declining" in signal_text or "decreasing" in signal_text:
+            market_factor = 0.90
+        else:
+            market_factor = 1.0
+        
+        # Forecast per month with trend
+        monthly_forecast = int(recent_avg * trend_factor * market_factor)
+        total_forecast = monthly_forecast * 3  # 3 months
+        
+        forecast = {
+            "product_code": product_code,
+            "forecast_period": "Q1_2025",
+            "forecast_units": total_forecast,
+            "monthly_breakdown": [
+                {"month": "2025-01", "forecast": monthly_forecast, "lower": int(monthly_forecast * 0.85), "upper": int(monthly_forecast * 1.15)},
+                {"month": "2025-02", "forecast": monthly_forecast, "lower": int(monthly_forecast * 0.85), "upper": int(monthly_forecast * 1.15)},
+                {"month": "2025-03", "forecast": monthly_forecast, "lower": int(monthly_forecast * 0.85), "upper": int(monthly_forecast * 1.15)},
+            ],
+            "confidence_interval": {
+                "lower": int(total_forecast * 0.85),
+                "upper": int(total_forecast * 1.15),
+            },
+            "method": "fallback_rule_based",
+            "market_growth_factor": market_factor,
+            "forecast_timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        }
 
     return {
         "product_code": product_code,
