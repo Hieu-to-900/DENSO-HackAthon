@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 from typing import Any, Dict
 
 import chromadb
@@ -194,26 +196,119 @@ async def analyze_with_api(
 
     Purpose: Send retrieved public context to xAI (anonymized) to generate market insight.
     """
-    # Mock xAI API call - replace with actual xAI API integration
-    # In real implementation, would:
-    # 1. Anonymize context (remove sensitive info)
-    # 2. Call xAI API
-    # 3. Get market insight
+    # Initialize OpenAI client for xAI API
+    xai_base_url = os.getenv("XAI_API_BASE_URL")
+    xai_api_key = os.getenv("XAI_API_KEY")
+    xai_model = os.getenv("XAI_MODEL_NAME", "gpt-4o-mini")
+    
+    if not xai_api_key:
+        raise ValueError("XAI_API_KEY environment variable is not set. Please check your .env file.")
+    
+    client = openai.OpenAI(
+        base_url=xai_base_url,
+        api_key=xai_api_key
+    )
+    
+    try:
+        # Get product data for context
+        product_data = get_internal_data_for_product(product_code)
+        
+        # Prepare context summary (anonymize by removing internal codes and sensitive data)
+        context_texts = []
+        for item in relevant_context[:5]:  # Use top 5 contexts
+            context_texts.append(f"- {item['content']} (Source: {item.get('source', 'Unknown')}, {item.get('timestamp', 'N/A')})")
+        
+        context_summary = "\n".join(context_texts)
+        
+        # Create anonymized prompt
+        prompt = f"""You are a market analysis expert. Analyze the following external market data and provide insights for demand forecasting.
 
-    context_summary = " ".join([item["content"] for item in relevant_context[:3]])
+Product Category: {product_data.get('category', 'Automotive Component')}
+Product Subcategory: {product_data.get('subcategory', 'Unknown')}
 
-    # Mock insight generation
-    market_insight = {
-        "product_code": product_code,
-        "insight": f"Market analysis for {product_code}: {context_summary[:100]}...",
-        "key_findings": [
-            "EV market growth trend detected",
-            "Battery component demand increasing",
-            "Regional variations in demand patterns",
-        ],
-        "confidence": 0.82,
-        "analysis_timestamp": "2024-10-15T10:10:00",
-    }
+External Market Data:
+{context_summary}
+
+Please provide:
+1. A concise market insight summary (2-3 sentences)
+2. 3-5 key findings that could impact demand
+3. A confidence score (0-1) for this analysis
+
+Return your response in the following JSON format:
+{{
+    "insight": "Brief market analysis summary",
+    "key_findings": ["Finding 1", "Finding 2", "Finding 3"],
+    "confidence": 0.85
+}}"""
+
+        # Call xAI API
+        response = client.chat.completions.create(
+            model=xai_model,
+            messages=[
+                {"role": "system", "content": "You are an expert market analyst specializing in automotive and technology sectors. Provide concise, data-driven insights."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=500
+        )
+        
+        # Parse response
+        response_text = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON from response
+        import json
+        import re
+        
+        # Find JSON in the response (handle code blocks)
+        json_match = re.search(r'\{[\s\S]*\}', response_text)
+        if json_match:
+            parsed_response = json.loads(json_match.group())
+            
+            market_insight = {
+                "product_code": product_code,
+                "insight": parsed_response.get("insight", response_text[:200]),
+                "key_findings": parsed_response.get("key_findings", []),
+                "confidence": parsed_response.get("confidence", 0.75),
+                "analysis_timestamp": "2024-10-15T10:10:00",
+                "model_used": xai_model,
+            }
+        else:
+            # Fallback if JSON parsing fails
+            market_insight = {
+                "product_code": product_code,
+                "insight": response_text[:200],
+                "key_findings": ["Analysis completed", "See insight for details"],
+                "confidence": 0.70,
+                "analysis_timestamp": "2024-10-15T10:10:00",
+                "model_used": xai_model,
+            }
+    
+    except Exception as e:
+        # Fallback to rule-based analysis if API fails
+        print(f"Error calling xAI API for {product_code}: {e}")
+        
+        # Simple rule-based analysis from context
+        context_summary = " ".join([item["content"] for item in relevant_context[:3]])
+        
+        key_findings = []
+        if "EV" in context_summary or "electric vehicle" in context_summary.lower():
+            key_findings.append("EV market growth trend detected")
+        if "battery" in context_summary.lower() or "demand" in context_summary.lower():
+            key_findings.append("Battery component demand increasing")
+        if "EU" in context_summary or "Asia" in context_summary or "US" in context_summary:
+            key_findings.append("Regional variations in demand patterns")
+        
+        if not key_findings:
+            key_findings = ["Market analysis based on available context", "Standard demand patterns observed"]
+        
+        market_insight = {
+            "product_code": product_code,
+            "insight": f"Market analysis for {product_code}: {context_summary[:150]}...",
+            "key_findings": key_findings,
+            "confidence": 0.60,
+            "analysis_timestamp": "2024-10-15T10:10:00",
+            "model_used": "fallback",
+        }
 
     return {
         "product_code": product_code,
