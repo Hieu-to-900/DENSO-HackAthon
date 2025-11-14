@@ -3,14 +3,16 @@ import Filters from './components/Filters';
 import MainOverview from './components/Dashboard/MainOverview';
 import ForecastAnalysis from './components/Dashboard/ForecastAnalysis';
 import SupplyChain from './components/Dashboard/SupplyChain';
+import ProductsOverview from './components/Dashboard/ProductsOverview';
 import { getProducts, runForecast } from './services/api';
 import './App.css';
 
 function App() {
   const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState('DENSO_EV_INVERTER');
+  const [selectedProduct, setSelectedProduct] = useState('INV-001');
   const [forecastData, setForecastData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'detail'
   const [filters, setFilters] = useState({
     forecastMode: 'comprehensive',
     forecastHorizonDays: 30,
@@ -67,29 +69,51 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>AI Demand Forecasting Dashboard</h1>
-        <p>Denso EV Inverter - Demand Analysis</p>
+        <p>Denso EV Inverter Products - Demand Analysis</p>
       </header>
 
-      <Filters
-        products={products}
-        selectedProduct={selectedProduct}
-        onProductChange={setSelectedProduct}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-      />
+      {/* View mode toggle */}
+      <div className="view-toggle">
+        <button
+          className={viewMode === 'overview' ? 'active' : ''}
+          onClick={() => setViewMode('overview')}
+        >
+          Products Overview
+        </button>
+        <button
+          className={viewMode === 'detail' ? 'active' : ''}
+          onClick={() => setViewMode('detail')}
+        >
+          Product Detail
+        </button>
+      </div>
 
-      {loading && (
-        <div className="loading">
-          <p>Loading forecast data...</p>
-        </div>
-      )}
+      {viewMode === 'overview' ? (
+        <ProductsOverview />
+      ) : (
+        <>
+          <Filters
+            products={products}
+            selectedProduct={selectedProduct}
+            onProductChange={setSelectedProduct}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+          />
 
-      {forecastData && !loading && (
-        <div className="dashboard-container">
-          <MainOverview forecastData={forecastData} />
-          <ForecastAnalysis forecastData={forecastData} />
-          <SupplyChain forecastData={forecastData} />
-        </div>
+          {loading && (
+            <div className="loading">
+              <p>Loading forecast data...</p>
+            </div>
+          )}
+
+          {forecastData && !loading && (
+            <div className="dashboard-container">
+              <MainOverview forecastData={forecastData} />
+              <ForecastAnalysis forecastData={forecastData} />
+              <SupplyChain forecastData={forecastData} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

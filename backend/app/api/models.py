@@ -79,3 +79,23 @@ class ScenarioData(BaseModel):
     product_id: str
     scenarios: Dict[str, Any]
 
+
+class ProductStatus(BaseModel):
+    """Product status model."""
+
+    product_code: str
+    product_name: str
+    category: str
+    unit_price: float
+    product_lifecycle: str
+    current_month_sales: int
+    last_5_months_avg: float
+    growth_rate: float
+    current_stock: int
+    safety_stock: int
+    reorder_point: int
+    stock_status: str
+    stock_ratio: float
+    warehouse_location: str
+    quality_score: float
+    defect_rate: float

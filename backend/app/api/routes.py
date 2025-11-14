@@ -13,6 +13,7 @@ from app.api.models import (
     HistoricalDataPoint,
     HistoricalDataResponse,
     ProductInfo,
+    ProductStatus,
     ScenarioData,
     SupplyChainMetrics,
 )
@@ -187,4 +188,30 @@ async def get_scenarios(product_id: str):
         product_id=product_id,
         scenarios=forecast_result.scenario_planning,
     )
+
+
+@router.get("/products/status", response_model=list[ProductStatus])
+async def get_all_products_status():
+    """Get status overview for all tracked products.
+
+    Returns:
+        List of product status dictionaries with key metrics
+    """
+    return DataService.get_all_products_status()
+
+
+@router.get("/products/{product_code}/status", response_model=ProductStatus)
+async def get_product_status(product_code: str):
+    """Get detailed status for a specific product.
+
+    Args:
+        product_code: Product code (e.g., INV-001)
+
+    Returns:
+        Product status dictionary
+    """
+    try:
+        return DataService.get_product_status(product_code)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 

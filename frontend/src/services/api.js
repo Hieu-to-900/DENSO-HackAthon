@@ -44,3 +44,13 @@ export const getScenarios = async (productId) => {
   return response.data;
 };
 
+export const getAllProductsStatus = async () => {
+  const response = await api.get('/products/status');
+  return response.data;
+};
+
+export const getProductStatus = async (productCode) => {
+  const response = await api.get(`/products/${productCode}/status`);
+  return response.data;
+};
+
