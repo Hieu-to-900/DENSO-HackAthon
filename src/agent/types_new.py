@@ -5,8 +5,9 @@ Contains State and Context definitions for the external data ingestion and paral
 
 from __future__ import annotations
 
+import operator
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Annotated, Any, Dict, List
 
 from typing_extensions import TypedDict
 
@@ -68,7 +69,8 @@ class State:
     total_products: int = 0
 
     # Batch results (from parallel processing)
-    batch_results: List[Dict[str, Any]] = field(default_factory=list)
+    # Use operator.add to automatically merge results from parallel category nodes
+    batch_results: Annotated[List[Dict[str, Any]], operator.add] = field(default_factory=list)
 
     # Aggregation
     aggregated_forecasts: Dict[str, Any] | None = None

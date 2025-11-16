@@ -22,10 +22,20 @@ async def aggregate_forecasts(
     Purpose: Combine forecasts from all parallel batches into a single result set.
     """
     # Collect all batch results
-    all_forecasts = []
     batch_results_list = state.batch_results or []
+    
+    # Debug logging
+    print(f"\n{'='*60}")
+    print(f"[AGGREGATE] Received {len(batch_results_list)} batch results from parallel categories")
+    print(f"{'='*60}")
+    
+    all_forecasts = []
 
     for batch_result in batch_results_list:
+        category = batch_result.get("category", "unknown")
+        batch_forecasts = batch_result.get("batch_results", [])
+        print(f"  [BATCH] Category: {category} - {len(batch_forecasts)} products")
+        
         if isinstance(batch_result, dict) and "batch_results" in batch_result:
             all_forecasts.extend(batch_result["batch_results"])
 

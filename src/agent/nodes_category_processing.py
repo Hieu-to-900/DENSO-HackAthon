@@ -403,13 +403,16 @@ async def process_category_batch(
             print(f"✗ Error processing {product_code}: {e}")
             continue
     
+    # Return as list for LangGraph reducer to merge parallel results
     return {
-        "batch_index": batch_index,
-        "category": category,
-        "category_name": category_batch.get("category_name"),
-        "batch_results": batch_results,
-        "products_processed": len(batch_results),
-        "shared_category_insight": category_insight,
+        "batch_results": [{
+            "batch_index": batch_index,
+            "category": category,
+            "category_name": category_batch.get("category_name"),
+            "batch_results": batch_results,
+            "products_processed": len(batch_results),
+            "shared_category_insight": category_insight,
+        }]
     }
 
 
