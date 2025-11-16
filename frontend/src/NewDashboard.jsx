@@ -5,12 +5,14 @@ import ForecastVisualization from './components/NewDashboard/ForecastVisualizati
 import RiskIntelligence from './components/NewDashboard/RiskIntelligence';
 import ActionRecommendations from './components/NewDashboard/ActionRecommendations';
 import { mockData } from './data/mockData';
+import { 
+  useForecastData, 
+  useActionRecommendations, 
+  useRiskNews 
+} from './hooks/useDashboardData';
 import './components/NewDashboard/NewDashboard.css';
 
 function NewDashboard() {
-  console.log('[NewDashboard] Component mounted');
-  console.log('[NewDashboard] mockData:', mockData);
-
   const [filters, setFilters] = useState({
     timeRange: '90d',
     products: [],
@@ -18,35 +20,68 @@ function NewDashboard() {
     searchQuery: ''
   });
 
-  const [data, setData] = useState({
-    kpis: mockData.kpis,
-    forecast: mockData.forecast,
-    newsRisks: mockData.newsRisks,
-    actions: mockData.actions,
-    regions: mockData.regions,
-    categories: mockData.categories
+  // Fetch real data from backend APIs (Phase 1 Integration)
+  const { 
+    data: forecastData, 
+    loading: forecastLoading, 
+    error: forecastError,
+    refetch: refetchForecast
+  } = useForecastData({
+    category: filters.products.length > 0 ? filters.products[0] : null,
+    limit: 10
   });
 
-  console.log('[NewDashboard] Data state:', data);
-  console.log('[NewDashboard] KPIs:', data.kpis);
-  console.log('[NewDashboard] Forecast:', data.forecast);
-  console.log('[NewDashboard] NewsRisks:', data.newsRisks);
+  const { 
+    data: actionsData, 
+    loading: actionsLoading, 
+    error: actionsError,
+    refetch: refetchActions
+  } = useActionRecommendations({
+    priority: null,
+    limit: 6
+  });
+
+  const { 
+    data: riskNewsData, 
+    loading: riskLoading, 
+    error: riskError,
+    refetch: refetchRisks
+  } = useRiskNews({
+    days: 30,
+    riskThreshold: 50
+  });
+
+  // Use mock data as fallback if API fails or data not loaded yet
+  const forecast = forecastData || mockData.forecast;
+  const actions = actionsData || mockData.actions;
+  const newsRisks = riskNewsData || mockData.newsRisks;
+
+  console.log('[NewDashboard] Data sources:', {
+    forecastSource: forecastData ? '✅ API' : '⚠️ Mock',
+    actionsSource: actionsData ? '✅ API' : '⚠️ Mock',
+    newsSource: riskNewsData ? '✅ API' : '⚠️ Mock',
+    forecastLoading,
+    actionsLoading,
+    riskLoading
+  });
 
   const handleFilterChange = (newFilters) => {
     setFilters({ ...filters, ...newFilters });
-    // TODO: Fetch filtered data from backend
+  };
+
+  // Manual refresh all data
+  const handleRefresh = () => {
+    console.log('[NewDashboard] Refreshing all data...');
+    refetchForecast();
+    refetchActions();
+    refetchRisks();
   };
 
   const handleActionUpdate = (actionId, status) => {
-    setData(prevData => ({
-      ...prevData,
-      actions: prevData.actions.map(action =>
-        action.id === actionId ? { ...action, status } : action
-      )
-    }));
+    // TODO: Update action via API
+    console.log('[NewDashboard] Action updated:', actionId, status);
+    refetchActions();
   };
-
-  console.log('[NewDashboard] Rendering...');
 
   return (
     <div className="new-dashboard">
@@ -54,30 +89,44 @@ function NewDashboard() {
       <Header
         filters={filters}
         onFilterChange={handleFilterChange}
-        categories={data.categories}
-        regions={data.regions}
+        onRefresh={handleRefresh}
+        categories={mockData.categories}
+        regions={mockData.regions}
       />
 
       <div className="dashboard-content">
-        {/* TIER 1 - KPI Overview */}
+        {/* TIER 1 - KPI Overview (Still using mock data - Phase 2) */}
         <section className="tier-1">
-          <KPIOverview kpiData={data.kpis} />
+          <KPIOverview 
+            kpiData={mockData.kpis}
+            loading={false}
+          />
         </section>
 
-        {/* TIER 2 - Demand Forecasting Visualization */}
+        {/* TIER 2 - Demand Forecasting Visualization (Now using API ✅) */}
         <section className="tier-2">
-          <ForecastVisualization forecastData={data.forecast} />
+          <ForecastVisualization 
+            forecastData={forecast}
+            loading={forecastLoading}
+            error={forecastError}
+          />
         </section>
 
-        {/* TIER 3 - Risk & News Intelligence */}
+        {/* TIER 3 - Risk & News Intelligence (Now using API ✅) */}
         <section className="tier-3">
-          <RiskIntelligence newsRisks={data.newsRisks} />
+          <RiskIntelligence 
+            newsRisks={newsRisks}
+            loading={riskLoading}
+            error={riskError}
+          />
         </section>
 
-        {/* TIER 4 - Action Recommendations */}
+        {/* TIER 4 - Action Recommendations (Now using API ✅) */}
         <section className="tier-4">
           <ActionRecommendations
-            actions={data.actions}
+            actions={actions}
+            loading={actionsLoading}
+            error={actionsError}
             onActionUpdate={handleActionUpdate}
           />
         </section>

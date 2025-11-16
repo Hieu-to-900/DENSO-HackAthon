@@ -1,14 +1,48 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 import './ForecastVisualization.css';
+import './LoadingStates.css';
 
-const ForecastVisualization = ({ forecastData }) => {
+const ForecastVisualization = ({ forecastData, loading, error }) => {
   const [selectedView, setSelectedView] = useState('timeseries');
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="forecast-viz loading-state">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Đang tải dữ liệu dự báo...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="forecast-viz error-state">
+        <div className="error-message">
+          <span className="error-icon">⚠️</span>
+          <h3>Không thể tải dữ liệu dự báo</h3>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()} className="retry-button">
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
   if (!forecastData) {
     console.error('[ForecastVisualization] Invalid forecastData:', forecastData);
-    return <div>Loading forecast data...</div>;
-  } // timeseries, products, heatmap, metrics
+    return (
+      <div className="forecast-viz empty-state">
+        <p>Không có dữ liệu dự báo</p>
+      </div>
+    );
+  }
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);

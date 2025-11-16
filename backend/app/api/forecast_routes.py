@@ -422,9 +422,13 @@ def _generate_mock_news(days: int, risk_threshold: int, category: str | None) ->
             "date": (datetime.utcnow() - timedelta(days=5)).strftime("%Y-%m-%d"),
             "risk_score": 85,
             "category": "logistics",
+            "category_name": "Logistics",
             "sentiment": "negative",
+            "summary": "Bão Hagibis gây tắc nghẽn nghiêm trọng tại cảng Yokohama, ảnh hưởng lịch trình xuất khẩu phụ tùng ô tô.",
             "impact": "Ảnh hưởng lịch trình nhập khẩu Q1, delay 7-10 ngày",
+            "tags": ["bão", "cảng biển", "logistics", "Nhật Bản"],
             "related_products": ["VCH20", "VK20", "447220-1510"],
+            "affected_products": ["VCH20", "VK20", "447220-1510"],
             "url": "https://asia.nikkei.com/port-yokohama",
         },
         {
@@ -434,9 +438,13 @@ def _generate_mock_news(days: int, risk_threshold: int, category: str | None) ->
             "date": (datetime.utcnow() - timedelta(days=12)).strftime("%Y-%m-%d"),
             "risk_score": 72,
             "category": "supply_chain",
+            "category_name": "Supply Chain",
             "sentiment": "negative",
+            "summary": "Giá thép thô tại Trung Quốc tăng 8% do chính sách hạn chế sản xuất, tác động đến ngành sản xuất ô tô.",
             "impact": "Tăng chi phí sản xuất Compressor, giảm margin 3-5%",
+            "tags": ["thép", "nguyên liệu", "Trung Quốc", "giá cả"],
             "related_products": ["447220-1510"],
+            "affected_products": ["447220-1510"],
             "url": "https://bloomberg.com/steel-prices",
         },
         {
@@ -446,9 +454,13 @@ def _generate_mock_news(days: int, risk_threshold: int, category: str | None) ->
             "date": (datetime.utcnow() - timedelta(days=8)).strftime("%Y-%m-%d"),
             "risk_score": 68,
             "category": "competition",
+            "category_name": "Competition",
             "sentiment": "negative",
+            "summary": "NGK đầu tư 50 triệu USD xây dựng nhà máy sản xuất bugi mới tại Thái Lan, công suất 10 triệu sản phẩm/năm.",
             "impact": "Tăng cạnh tranh thị trường ASEAN, có thể mất 5-8% thị phần",
+            "tags": ["NGK", "cạnh tranh", "Thái Lan", "bugi"],
             "related_products": ["VCH20", "VK20"],
+            "affected_products": ["VCH20", "VK20"],
             "url": "https://reuters.com/ngk-thailand",
         },
         {
@@ -458,9 +470,13 @@ def _generate_mock_news(days: int, risk_threshold: int, category: str | None) ->
             "date": (datetime.utcnow() - timedelta(days=3)).strftime("%Y-%m-%d"),
             "risk_score": 55,
             "category": "market_trend",
+            "category_name": "Market Trend",
             "sentiment": "mixed",
+            "summary": "Toyota Việt Nam công bố kế hoạch sản xuất xe điện, dự kiến ra mắt 2 mẫu xe hybrid và 1 mẫu full-EV trong năm 2025.",
             "impact": "Cơ hội: cảm biến EV. Rủi ro: giảm nhu cầu bugi dài hạn",
+            "tags": ["xe điện", "Toyota", "EV", "hybrid"],
             "related_products": ["234-9065", "VCH20"],
+            "affected_products": ["234-9065", "VCH20"],
             "url": "https://vnexpress.net/toyota-ev-2025",
         },
         {
@@ -470,9 +486,13 @@ def _generate_mock_news(days: int, risk_threshold: int, category: str | None) ->
             "date": (datetime.utcnow() - timedelta(days=20)).strftime("%Y-%m-%d"),
             "risk_score": 78,
             "category": "regulatory",
+            "category_name": "Regulatory",
             "sentiment": "positive",
+            "summary": "Bộ GTVT chính thức ban hành quy định áp dụng tiêu chuẩn khí thải Euro 5 cho toàn bộ xe ô tô mới từ 01/01/2025.",
             "impact": "Tăng nhu cầu O2 Sensor và hệ thống lọc khí thải tiên tiến",
+            "tags": ["Euro 5", "khí thải", "quy định", "môi trường"],
             "related_products": ["234-9065", "DEN-5656"],
+            "affected_products": ["234-9065", "DEN-5656"],
             "url": "https://mt.gov.vn/euro5-2025",
         },
         {
@@ -482,9 +502,13 @@ def _generate_mock_news(days: int, risk_threshold: int, category: str | None) ->
             "date": (datetime.utcnow() - timedelta(days=15)).strftime("%Y-%m-%d"),
             "risk_score": 62,
             "category": "weather",
+            "category_name": "Weather",
             "sentiment": "positive",
+            "summary": "Trung tâm Khí tượng Thủy văn dự báo đợt nắng nóng kéo dài 3-4 tháng tại khu vực miền Trung và Tây Nguyên.",
             "impact": "Tăng nhu cầu điều hòa ô tô, dự kiến +18% doanh số Compressor",
+            "tags": ["thời tiết", "nắng nóng", "điều hòa", "miền Trung"],
             "related_products": ["447220-1510"],
+            "affected_products": ["447220-1510"],
             "url": "https://nchmf.gov.vn/weather-forecast",
         },
     ]
@@ -522,15 +546,17 @@ def _generate_risk_timeline(days: int) -> List[Dict[str, Any]]:
 
 def _extract_risk_keywords() -> List[Dict[str, Any]]:
     """Extract top risk keywords from news."""
+    # Normalize frequency to 0-1 range for frontend opacity calculation
+    max_count = 15
     return [
-        {"keyword": "港口", "count": 15, "sentiment": -0.7},
-        {"keyword": "鋼材", "count": 12, "sentiment": -0.5},
-        {"keyword": "競爭", "count": 10, "sentiment": -0.6},
-        {"keyword": "環境規制", "count": 8, "sentiment": 0.3},
-        {"keyword": "電動車", "count": 7, "sentiment": 0.1},
-        {"keyword": "天候", "count": 6, "sentiment": 0.4},
-        {"keyword": "供給網", "count": 5, "sentiment": -0.4},
-        {"keyword": "物流", "count": 4, "sentiment": -0.3},
+        {"word": "Cảng biển", "keyword": "港口", "count": 15, "frequency": 15/max_count, "sentiment": -0.7},
+        {"word": "Thép", "keyword": "鋼材", "count": 12, "frequency": 12/max_count, "sentiment": -0.5},
+        {"word": "Cạnh tranh", "keyword": "競爭", "count": 10, "frequency": 10/max_count, "sentiment": -0.6},
+        {"word": "Quy định môi trường", "keyword": "環境規制", "count": 8, "frequency": 8/max_count, "sentiment": 0.3},
+        {"word": "Xe điện", "keyword": "電動車", "count": 7, "frequency": 7/max_count, "sentiment": 0.1},
+        {"word": "Thời tiết", "keyword": "天候", "count": 6, "frequency": 6/max_count, "sentiment": 0.4},
+        {"word": "Chuỗi cung ứng", "keyword": "供給網", "count": 5, "frequency": 5/max_count, "sentiment": -0.4},
+        {"word": "Logistics", "keyword": "物流", "count": 4, "frequency": 4/max_count, "sentiment": -0.3},
     ]
 
 

@@ -1,0 +1,139 @@
+/* ========================================
+   LOADING & ERROR STATES - Global Styles
+   Applied to all dashboard components
+   ======================================== */
+
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  background: white;
+  border-radius: 12px;
+  padding: 48px 24px;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  text-align: center;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Error Message */
+.error-message {
+  text-align: center;
+  max-width: 420px;
+}
+
+.error-icon {
+  font-size: 56px;
+  display: block;
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+.error-message h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ef4444;
+  margin: 0 0 12px 0;
+}
+
+.error-message p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 24px 0;
+  line-height: 1.6;
+}
+
+.retry-button {
+  padding: 10px 28px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.retry-button:active {
+  transform: translateY(0);
+}
+
+/* Empty State */
+.empty-state {
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+/* Component-specific overrides */
+.forecast-viz.loading-state,
+.forecast-viz.error-state,
+.forecast-viz.empty-state {
+  min-height: 500px;
+}
+
+.risk-intelligence.loading-state,
+.risk-intelligence.error-state,
+.risk-intelligence.empty-state {
+  min-height: 450px;
+}
+
+.action-recommendations.loading-state,
+.action-recommendations.error-state,
+.action-recommendations.empty-state {
+  min-height: 400px;
+}
+
+/* Smooth transitions */
+.loading-state,
+.error-state {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,12 +1,46 @@
 import React, { useState } from 'react';
 import './RiskIntelligence.css';
+import './LoadingStates.css';
 
-const RiskIntelligence = ({ newsRisks }) => {
+const RiskIntelligence = ({ newsRisks, loading, error }) => {
   const [selectedRisk, setSelectedRisk] = useState(null);
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="risk-intelligence loading-state">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Đang tải thông tin rủi ro...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="risk-intelligence error-state">
+        <div className="error-message">
+          <span className="error-icon">⚠️</span>
+          <h3>Không thể tải thông tin rủi ro</h3>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()} className="retry-button">
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
   if (!newsRisks || !newsRisks.news || !Array.isArray(newsRisks.news)) {
     console.error('[RiskIntelligence] Invalid newsRisks:', newsRisks);
-    return <div>Loading risk intelligence...</div>;
+    return (
+      <div className="risk-intelligence empty-state">
+        <p>Không có dữ liệu rủi ro</p>
+      </div>
+    );
   }
 
   const getRiskColor = (score) => {

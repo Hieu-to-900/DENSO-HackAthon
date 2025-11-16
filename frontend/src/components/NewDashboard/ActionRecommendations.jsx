@@ -1,8 +1,37 @@
 import React, { useState } from 'react';
 import './ActionRecommendations.css';
+import './LoadingStates.css';
 
-const ActionRecommendations = ({ actions, onActionUpdate }) => {
+const ActionRecommendations = ({ actions, loading, error, onActionUpdate }) => {
   const [filter, setFilter] = useState('all'); // all, high, medium, low
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="action-recommendations loading-state">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Đang tải khuyến nghị hành động...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="action-recommendations error-state">
+        <div className="error-message">
+          <span className="error-icon">⚠️</span>
+          <h3>Không thể tải khuyến nghị</h3>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()} className="retry-button">
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Add defensive check
   if (!actions || !Array.isArray(actions)) {
