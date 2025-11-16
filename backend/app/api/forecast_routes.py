@@ -5,9 +5,13 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.models import ForecastRequest, ForecastResponse
+from app.database.connection import Database, get_db
+from app.repositories.forecast_repository import ForecastRepository
+from app.repositories.action_repository import ActionRepository
+from app.repositories.risk_repository import RiskRepository
 
 router = APIRouter()
 
@@ -22,8 +26,12 @@ async def get_latest_forecasts(
     product_codes: str | None = Query(None, description="Comma-separated product codes"),
     category: str | None = Query(None, description="Filter by category"),
     limit: int = Query(10, ge=1, le=100, description="Number of products to return"),
+    db: Database = Depends(get_db),
 ) -> Dict[str, Any]:
     """Get latest forecast data for dashboard Tier 2.
+    
+    Phase 2: Returns real forecast data from database (saved by Celery task).
+    Fallback: Mock data if database is empty.
     
     Returns aggregated forecasts with time series, product breakdown, heatmap, and metrics.
     This is the main endpoint for the Forecast Visualization component.
@@ -32,6 +40,7 @@ async def get_latest_forecasts(
         product_codes: Optional filter by specific products (comma-separated)
         category: Optional filter by product category
         limit: Maximum number of products to return
+        db: Database connection (injected)
         
     Returns:
         Dictionary containing:
@@ -40,7 +49,86 @@ async def get_latest_forecasts(
         - heatmap: Category-month intensity matrix
         - metrics: Model performance metrics
     """
-    # Generate mock forecast data (will integrate with LangGraph in Phase 2)
+    forecast_repo = ForecastRepository(db.pool)
+    
+    # Try to get real forecasts from database
+    try:
+        product_code_list = product_codes.split(",") if product_codes else None
+        forecasts = await forecast_repo.get_latest_forecasts(
+            product_codes=product_code_list,
+            category=category,
+            limit=limit,
+        )
+        
+        if forecasts:
+            # Build response from database data
+            products = []
+            all_timeseries = []
+            
+            for forecast in forecasts:
+                # Get timeseries for this forecast
+                timeseries = await forecast_repo.get_timeseries(forecast["id"])
+                
+                # Get metrics for this forecast
+                metrics = await forecast_repo.get_metrics(forecast["id"])
+                
+                product = {
+                    "product_id": str(forecast["id"]),
+                    "product_code": forecast["product_code"],
+                    "product_name": forecast["product_name"],
+                    "category": forecast["category"],
+                    "forecast_units": forecast["forecast_units"],
+                    "current_stock": forecast["current_stock"],
+                    "trend": forecast["trend"],
+                    "change_percent": forecast["change_percent"],
+                    "confidence": forecast["confidence"],
+                    "forecast_horizon": forecast["forecast_horizon"],
+                    "accuracy": metrics.get("r_squared") if metrics else None,
+                }
+                products.append(product)
+                
+                # Collect timeseries for aggregate chart
+                all_timeseries.extend([
+                    {
+                        "date": ts["date"].isoformat(),
+                        "actual": ts["actual"],
+                        "forecast": ts["forecast"],
+                        "upper_bound": ts["upper_bound"],
+                        "lower_bound": ts["lower_bound"],
+                    }
+                    for ts in timeseries
+                ])
+            
+            # Generate heatmap from database data
+            heatmap = _generate_heatmap_from_forecasts(forecasts)
+            
+            # Calculate aggregate metrics
+            aggregated_metrics = await forecast_repo.get_forecast_aggregates()
+            
+            return {
+                "timestamp": datetime.utcnow().isoformat(),
+                "total_products": len(products),
+                "total_forecast_units": sum(p["forecast_units"] for p in products),
+                "timeSeries": all_timeseries[:90],  # Limit to 90 days
+                "productBreakdown": products,
+                "heatmap": heatmap,
+                "metrics": {
+                    "avg_confidence": aggregated_metrics.get("avg_confidence"),
+                    "total_products": aggregated_metrics.get("total_products"),
+                    "latest_update": aggregated_metrics.get("latest_forecast_date"),
+                },
+                "filters_applied": {
+                    "product_codes": product_code_list,
+                    "category": category,
+                    "limit": limit,
+                },
+                "data_source": "database",
+            }
+        
+    except Exception as e:
+        print(f"⚠️ [API] Database query failed, falling back to mock data: {str(e)}")
+    
+    # Fallback to mock data (Phase 1 behavior)
     products = _generate_mock_products(limit, category, product_codes)
     time_series = _generate_time_series_data()
     heatmap = _generate_heatmap_data()
@@ -59,6 +147,7 @@ async def get_latest_forecasts(
             "category": category,
             "limit": limit,
         },
+        "data_source": "mock",
     }
 
 
@@ -67,8 +156,12 @@ async def get_action_recommendations(
     priority: str | None = Query(None, description="Filter by priority: high/medium/low"),
     category: str | None = Query(None, description="Filter by category"),
     limit: int = Query(6, ge=1, le=20, description="Number of actions to return"),
+    db: Database = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """Get prioritized action recommendations for dashboard Tier 4.
+    
+    Phase 2: Returns real actions from database (saved by Celery task).
+    Fallback: Mock data if database is empty.
     
     Returns actionable recommendations based on forecast insights and risks.
     This powers the Action Recommendations component.
@@ -77,6 +170,7 @@ async def get_action_recommendations(
         priority: Optional filter by priority level
         category: Optional filter by action category
         limit: Maximum number of actions to return
+        db: Database connection (injected)
         
     Returns:
         List of action items with:
@@ -85,6 +179,42 @@ async def get_action_recommendations(
         - actionItems (step-by-step tasks)
         - affectedProducts, riskIfIgnored
     """
+    action_repo = ActionRepository(db.pool)
+    
+    # Try to get real actions from database
+    try:
+        actions = await action_repo.get_active_actions(
+            priority=priority,
+            category=category,
+            limit=limit,
+        )
+        
+        if actions:
+            # Format for frontend
+            formatted_actions = [
+                {
+                    "id": str(action["id"]),
+                    "priority": action["priority"],
+                    "category": action["category"],
+                    "title": action["title"],
+                    "description": action["description"],
+                    "impact": action["expected_impact"],
+                    "estimatedCost": action["estimated_cost"],
+                    "deadline": action["deadline"].isoformat() if action["deadline"] else None,
+                    "actionItems": action["action_items"] or [],
+                    "affectedProducts": action["affected_products"],
+                    "confidence": action["confidence_score"],
+                    "status": action["status"],
+                }
+                for action in actions
+            ]
+            
+            return formatted_actions
+        
+    except Exception as e:
+        print(f"⚠️ [API] Database query failed, falling back to mock data: {str(e)}")
+    
+    # Fallback to mock data (Phase 1 behavior)
     actions = _generate_mock_actions(limit, priority, category)
     
     return actions
@@ -255,6 +385,47 @@ def _generate_heatmap_data() -> List[Dict[str, Any]]:
                 "month": month_date.strftime("%Y-%m"),
                 "value": round(4000 + intensity * 2000),
                 "intensity": round(min(intensity, 1.0), 2),
+            })
+        
+        heatmap.append({
+            "category": category,
+            "values": values,
+        })
+    
+    return heatmap
+
+
+def _generate_heatmap_from_forecasts(forecasts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Generate heatmap from database forecast data."""
+    # Group forecasts by category
+    category_totals = {}
+    for forecast in forecasts:
+        category = forecast["category"]
+        units = forecast["forecast_units"]
+        
+        if category not in category_totals:
+            category_totals[category] = []
+        category_totals[category].append(units)
+    
+    # Generate heatmap with actual data
+    heatmap = []
+    today = datetime.utcnow()
+    
+    for category, units_list in category_totals.items():
+        avg_units = sum(units_list) / len(units_list)
+        max_units = max(units_list)
+        
+        values = []
+        for month_offset in range(6):
+            month_date = today + timedelta(days=30 * month_offset)
+            # Simulate monthly trend
+            monthly_value = avg_units * (1 + month_offset * 0.05)
+            intensity = min(monthly_value / (max_units * 1.5), 1.0)
+            
+            values.append({
+                "month": month_date.strftime("%Y-%m"),
+                "value": round(monthly_value),
+                "intensity": round(intensity, 2),
             })
         
         heatmap.append({
