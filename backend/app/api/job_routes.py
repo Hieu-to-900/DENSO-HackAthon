@@ -18,15 +18,21 @@ async def trigger_forecast() -> Dict[str, Any]:
     Returns job ID for tracking.
     """
     try:
+        print("🎯 [API] Triggering forecast job...")
+        
         # Trigger async task
         task = run_scheduled_forecast.delay()
         
+        print(f"✅ [API] Task queued: {task.id}")
+        print(f"📊 [API] Task state: {task.state}")
+        
         return {
             "job_id": task.id,
-            "status": "pending",
+            "status": task.state.lower(),
             "message": "Forecast job triggered successfully",
         }
     except Exception as e:
+        print(f"❌ [API] Failed to trigger job: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to trigger job: {str(e)}")
 
 

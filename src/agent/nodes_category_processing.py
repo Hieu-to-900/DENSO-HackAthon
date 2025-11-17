@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 import chromadb
-import openai
+from openai import AsyncOpenAI
 import pandas as pd
 from dotenv import load_dotenv
 from langgraph.runtime import Runtime
@@ -97,7 +97,7 @@ async def retrieve_category_context(
     if not embedding_api_key:
         raise ValueError("EMBEDDING_API_KEY environment variable is not set")
     
-    client = openai.OpenAI(
+    client = AsyncOpenAI(
         base_url=embedding_base_url,
         api_key=embedding_api_key
     )
@@ -108,8 +108,8 @@ async def retrieve_category_context(
         description = category_info.get("description", "")
         query_text = f"{category_name} {description} automotive market trends demand forecast Vietnam"
         
-        # Generate query embedding
-        response = client.embeddings.create(
+        # Generate query embedding (async call)
+        response = await client.embeddings.create(
             model="text-embedding-3-small",
             input=query_text
         )
@@ -232,7 +232,7 @@ async def analyze_category_with_api(
     if not xai_api_key:
         raise ValueError("XAI_API_KEY environment variable is not set")
     
-    client = openai.OpenAI(
+    client = AsyncOpenAI(
         base_url=xai_base_url,
         api_key=xai_api_key
     )
@@ -268,8 +268,8 @@ Return your response in JSON format:
     "confidence": 0.85
 }}"""
 
-        # Call xAI API
-        response = client.chat.completions.create(
+        # Call xAI API (async call)
+        response = await client.chat.completions.create(
             model=xai_model,
             messages=[
                 {"role": "system", "content": "You are an expert market analyst specializing in Vietnamese automotive aftermarket and DENSO products."},

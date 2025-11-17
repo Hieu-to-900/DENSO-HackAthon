@@ -74,13 +74,14 @@ celery_app.conf.beat_schedule = {
 }
 
 # Task routing (optional - for multiple queues)
-celery_app.conf.task_routes = {
-    "app.tasks.forecast_tasks.run_scheduled_forecast": {"queue": "forecast"},
-    "app.tasks.forecast_tasks.generate_daily_summary": {"queue": "reports"},
-    "app.tasks.forecast_tasks.cleanup_old_alerts": {"queue": "maintenance"},
-}
+# DISABLED for now - use default queue for all tasks
+# celery_app.conf.task_routes = {
+#     "app.tasks.forecast_tasks.run_scheduled_forecast": {"queue": "forecast"},
+#     "app.tasks.forecast_tasks.generate_daily_summary": {"queue": "reports"},
+#     "app.tasks.forecast_tasks.cleanup_old_alerts": {"queue": "maintenance"},
+# }
 
-# Default queue
+# Default queue - all tasks use this
 celery_app.conf.task_default_queue = "default"
 celery_app.conf.task_default_exchange = "default"
 celery_app.conf.task_default_routing_key = "default"

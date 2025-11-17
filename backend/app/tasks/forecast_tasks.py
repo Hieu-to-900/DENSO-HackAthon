@@ -28,16 +28,11 @@ from agent.types_new import State
 class AsyncTask(Task):
     """Base task with async support."""
     
-    _db: Database = None
-    
-    @property
-    def db(self) -> Database:
-        """Get database connection."""
-        if self._db is None:
-            self._db = Database()
-            # Initialize connection pool
-            asyncio.run(self._db.connect())
-        return self._db
+    async def get_db(self) -> Database:
+        """Get fresh database connection for this task."""
+        db = Database()
+        await db.connect()
+        return db
 
 
 @celery_app.task(
@@ -59,8 +54,8 @@ def run_scheduled_forecast(self) -> Dict[str, Any]:
     try:
         print(f"🚀 [TASK] Starting scheduled forecast at {datetime.utcnow()}")
         
-        # Run async forecast function
-        result = asyncio.run(_run_forecast_async(self.db))
+        # Run async forecast function with fresh DB connection
+        result = asyncio.run(_run_forecast_async_wrapper())
         
         print(f"✅ [TASK] Forecast completed successfully")
         return result
@@ -69,6 +64,19 @@ def run_scheduled_forecast(self) -> Dict[str, Any]:
         print(f"❌ [TASK] Forecast failed: {str(exc)}")
         # Retry on failure
         raise self.retry(exc=exc)
+
+
+async def _run_forecast_async_wrapper() -> Dict[str, Any]:
+    """Wrapper to create fresh DB connection."""
+    db = Database()
+    await db.connect()
+    
+    try:
+        result = await _run_forecast_async(db)
+        return result
+    finally:
+        # Close connection when done
+        await db.close()
 
 
 async def _run_forecast_async(db: Database) -> Dict[str, Any]:
@@ -288,7 +296,7 @@ def generate_daily_summary(self) -> Dict[str, Any]:
     try:
         print(f"📊 [TASK] Generating daily summary at {datetime.utcnow()}")
         
-        result = asyncio.run(_generate_summary_async(self.db))
+        result = asyncio.run(_generate_summary_wrapper())
         
         print(f"✅ [TASK] Daily summary completed")
         return result
@@ -296,6 +304,18 @@ def generate_daily_summary(self) -> Dict[str, Any]:
     except Exception as exc:
         print(f"❌ [TASK] Summary generation failed: {str(exc)}")
         raise self.retry(exc=exc)
+
+
+async def _generate_summary_wrapper() -> Dict[str, Any]:
+    """Wrapper to create fresh DB connection."""
+    db = Database()
+    await db.connect()
+    
+    try:
+        result = await _generate_summary_async(db)
+        return result
+    finally:
+        await db.close()
 
 
 async def _generate_summary_async(db: Database) -> Dict[str, Any]:
@@ -337,7 +357,7 @@ def cleanup_old_alerts(self, days: int = 90) -> Dict[str, Any]:
     try:
         print(f"🧹 [TASK] Starting cleanup of alerts older than {days} days")
         
-        result = asyncio.run(_cleanup_alerts_async(self.db, days))
+        result = asyncio.run(_cleanup_alerts_wrapper(days))
         
         print(f"✅ [TASK] Cleanup completed: {result['deleted_count']} alerts deleted")
         return result
@@ -345,6 +365,18 @@ def cleanup_old_alerts(self, days: int = 90) -> Dict[str, Any]:
     except Exception as exc:
         print(f"❌ [TASK] Cleanup failed: {str(exc)}")
         raise self.retry(exc=exc)
+
+
+async def _cleanup_alerts_wrapper(days: int) -> Dict[str, Any]:
+    """Wrapper to create fresh DB connection."""
+    db = Database()
+    await db.connect()
+    
+    try:
+        result = await _cleanup_alerts_async(db, days)
+        return result
+    finally:
+        await db.close()
 
 
 async def _cleanup_alerts_async(db: Database, days: int) -> Dict[str, Any]:

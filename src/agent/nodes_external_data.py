@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any, Dict
 
-import openai
+from openai import AsyncOpenAI
 from dotenv import load_dotenv
 from langgraph.runtime import Runtime
 
@@ -264,8 +264,8 @@ async def store_in_chromadb(
     
     if not embedding_api_key:
         raise ValueError("EMBEDDING_API_KEY environment variable is not set. Please check your .env file.")
-    
-    client = openai.OpenAI(
+
+    client = AsyncOpenAI(
         base_url=embedding_base_url,
         api_key=embedding_api_key
     )
@@ -276,13 +276,11 @@ async def store_in_chromadb(
     
     for idx, item in enumerate(cleaned_data):
         try:
-            # Generate embedding for cleaned content
-            response = client.embeddings.create(
+            # Generate embedding for cleaned content (async call)
+            response = await client.embeddings.create(
                 model="text-embedding-3-small",
                 input=item["cleaned_content"]
-            )
-            
-            # Extract embedding vector
+            )            # Extract embedding vector
             embedding = response.data[0].embedding
             
             # Store embedding data (in real implementation, would store in ChromaDB)

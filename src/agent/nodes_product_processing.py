@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict
 
 import chromadb
-import openai
+from openai import AsyncOpenAI
 import pandas as pd
 from dotenv import load_dotenv
 from langgraph.runtime import Runtime
@@ -85,7 +85,7 @@ async def retrieve_relevant_context(
     if not embedding_api_key:
         raise ValueError("EMBEDDING_API_KEY environment variable is not set. Please check your .env file.")
     
-    client = openai.OpenAI(
+    client = AsyncOpenAI(
         base_url=embedding_base_url,
         api_key=embedding_api_key
     )
@@ -97,8 +97,8 @@ async def retrieve_relevant_context(
         # Create search query based on product information
         query_text = f"{product_data['product_name']} {product_data['category']} {product_data['subcategory']} market trends demand forecast"
         
-        # Step 1: Generate query embedding for product_code
-        response = client.embeddings.create(
+        # Step 1: Generate query embedding for product_code (async call)
+        response = await client.embeddings.create(
             model="text-embedding-3-small",
             input=query_text
         )
@@ -207,7 +207,7 @@ async def analyze_with_api(
     if not xai_api_key:
         raise ValueError("XAI_API_KEY environment variable is not set. Please check your .env file.")
     
-    client = openai.OpenAI(
+    client = AsyncOpenAI(
         base_url=xai_base_url,
         api_key=xai_api_key
     )
@@ -244,8 +244,8 @@ Return your response in the following JSON format:
     "confidence": 0.85
 }}"""
 
-        # Call xAI API
-        response = client.chat.completions.create(
+        # Call xAI API (async call)
+        response = await client.chat.completions.create(
             model=xai_model,
             messages=[
                 {"role": "system", "content": "You are an expert market analyst specializing in automotive and technology sectors. Provide concise, data-driven insights."},

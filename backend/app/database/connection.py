@@ -42,6 +42,10 @@ class Database:
             self.pool = None
             print("✅ Database connection pool closed")
     
+    async def close(self):
+        """Alias for disconnect() - close database connection pool."""
+        await self.disconnect()
+    
     async def fetch_one(self, query: str, *args):
         """Fetch one row."""
         async with self.pool.acquire() as connection:

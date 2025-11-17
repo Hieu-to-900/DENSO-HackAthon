@@ -225,8 +225,12 @@ async def get_risk_news(
     days: int = Query(30, ge=1, le=90, description="Number of days to look back"),
     risk_threshold: int = Query(50, ge=0, le=100, description="Minimum risk score"),
     category: str | None = Query(None, description="Filter by risk category"),
+    db: Database = Depends(get_db),
 ) -> Dict[str, Any]:
     """Get risk intelligence and news analysis for dashboard Tier 3.
+    
+    Phase 2: Returns real news from ChromaDB.
+    Fallback: Mock data if ChromaDB query fails.
     
     Returns external market insights, supply chain risks, and competitive intelligence.
     This powers the Risk Intelligence component.
@@ -235,6 +239,7 @@ async def get_risk_news(
         days: Number of days of historical risk data
         risk_threshold: Minimum risk score to include
         category: Optional filter by risk category
+        db: Database connection (injected)
         
     Returns:
         Dictionary containing:
@@ -243,6 +248,140 @@ async def get_risk_news(
         - keywords: Top risk keywords from news
         - distribution: Risk breakdown by category
     """
+    from app.services.chromadb_service import chromadb_service
+    from app.services.nlp_service import nlp_service
+    
+    # Try to get real news from ChromaDB
+    try:
+        # Query ChromaDB for recent news
+        chromadb_results = chromadb_service.query_recent_news(
+            query_text=None,  # Get all documents, no semantic filtering
+            n_results=100,  # Get more documents to filter later
+        )
+        
+        if chromadb_results and len(chromadb_results) > 0:
+            # Convert risk_threshold from 0-100 scale to 0-1 scale
+            threshold = risk_threshold / 100.0
+            
+            # Filter and format news
+            news_items = []
+            for doc in chromadb_results:
+                metadata = doc.get("metadata", {})
+                risk_score = float(metadata.get("risk_score", 0))
+                
+                # Apply filters
+                if risk_score * 100 < risk_threshold:
+                    continue
+                    
+                if category and metadata.get("category") != category:
+                    continue
+                
+                # Parse date
+                article_date = metadata.get("article_date", "")
+                if article_date:
+                    try:
+                        date_obj = datetime.fromisoformat(article_date)
+                        days_old = (datetime.now() - date_obj).days
+                        if days_old > days:
+                            continue
+                    except:
+                        pass
+                
+                # Format for frontend
+                news_item = {
+                    "id": doc.get("id", ""),
+                    "title": metadata.get("title", ""),
+                    "source": metadata.get("source", ""),
+                    "date": article_date,
+                    "risk_score": int(risk_score * 100),  # Convert back to 0-100
+                    "category": metadata.get("category", ""),
+                    "category_name": metadata.get("category", "").replace("_", " ").title(),
+                    "sentiment": metadata.get("sentiment", "neutral"),
+                    "summary": doc.get("text", "")[:200] + "...",
+                    "impact": f"Risk level {int(risk_score * 100)}/100",
+                    "tags": metadata.get("tags", "").split(",") if metadata.get("tags") else [],
+                    "related_products": metadata.get("related_products", "").split(",") if metadata.get("related_products") else [],
+                    "affected_products": metadata.get("related_products", "").split(",") if metadata.get("related_products") else [],
+                    "url": metadata.get("url", ""),
+                }
+                news_items.append(news_item)
+            
+            # Sort by risk score descending
+            news_items.sort(key=lambda x: x["risk_score"], reverse=True)
+            
+            # Extract keywords from news summaries
+            if news_items:
+                summaries = [item["summary"] for item in news_items[:10]]
+                keywords = nlp_service.summarize_risk_keywords(summaries, top_n=20)
+                
+                # Format keywords for frontend
+                formatted_keywords = [
+                    {
+                        "keyword": kw["keyword"],
+                        "count": kw.get("count", 1),
+                        "frequency": kw.get("frequency", 0.5),
+                        "sentiment": kw.get("sentiment", "neutral"),
+                        "word": kw["keyword"],  # Vietnamese word
+                    }
+                    for kw in keywords
+                ]
+            else:
+                formatted_keywords = []
+            
+            # Generate timeline from news dates
+            timeline = []
+            date_counts = {}
+            for item in news_items:
+                date = item["date"][:10] if item["date"] else ""
+                if date:
+                    date_counts[date] = date_counts.get(date, 0) + 1
+            
+            for date, count in sorted(date_counts.items()):
+                timeline.append({
+                    "date": date,
+                    "count": count,
+                    "risk_level": "high" if count > 3 else "medium" if count > 1 else "low"
+                })
+            
+            # Calculate distribution by category
+            category_counts = {}
+            for item in news_items:
+                cat = item["category"]
+                category_counts[cat] = category_counts.get(cat, 0) + 1
+            
+            distribution = [
+                {
+                    "category": cat,
+                    "count": count,
+                    "percentage": round(count / len(news_items) * 100, 1) if news_items else 0
+                }
+                for cat, count in category_counts.items()
+            ]
+            
+            return {
+                "news": news_items,
+                "timeline": timeline,
+                "keywords": formatted_keywords,
+                "distribution": distribution,
+                "period": {
+                    "days": days,
+                    "start_date": (datetime.utcnow() - timedelta(days=days)).isoformat(),
+                    "end_date": datetime.utcnow().isoformat(),
+                },
+                "filters_applied": {
+                    "risk_threshold": risk_threshold,
+                    "category": category,
+                },
+                "data_source": "chromadb",
+                "total_results": len(news_items),
+            }
+    
+    except Exception as e:
+        print(f"⚠️ [API] ChromaDB query failed, falling back to mock data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    
+    # Fallback to mock data (Phase 1 behavior)
     news_items = _generate_mock_news(days, risk_threshold, category)
     timeline = _generate_risk_timeline(days)
     keywords = _extract_risk_keywords()
@@ -262,6 +401,7 @@ async def get_risk_news(
             "risk_threshold": risk_threshold,
             "category": category,
         },
+        "data_source": "mock",
     }
 
 
