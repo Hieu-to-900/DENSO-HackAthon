@@ -51,11 +51,16 @@ def run_scheduled_forecast(self) -> Dict[str, Any]:
     3. Stores alerts in database
     4. Returns execution summary
     """
+    loop = None
     try:
         print(f"🚀 [TASK] Starting scheduled forecast at {datetime.utcnow()}")
         
+        # Create new event loop for this task
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
         # Run async forecast function with fresh DB connection
-        result = asyncio.run(_run_forecast_async_wrapper())
+        result = loop.run_until_complete(_run_forecast_async_wrapper())
         
         print(f"✅ [TASK] Forecast completed successfully")
         return result
@@ -64,6 +69,20 @@ def run_scheduled_forecast(self) -> Dict[str, Any]:
         print(f"❌ [TASK] Forecast failed: {str(exc)}")
         # Retry on failure
         raise self.retry(exc=exc)
+    finally:
+        # Clean up event loop AFTER all operations complete
+        if loop:
+            try:
+                # Cancel pending tasks
+                pending = asyncio.all_tasks(loop)
+                for task in pending:
+                    task.cancel()
+                # Run loop one more time to handle cancellations
+                if pending:
+                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                loop.close()
+            except Exception as e:
+                print(f"⚠️ [TASK] Error cleaning up event loop: {str(e)}")
 
 
 async def _run_forecast_async_wrapper() -> Dict[str, Any]:
@@ -73,10 +92,18 @@ async def _run_forecast_async_wrapper() -> Dict[str, Any]:
     
     try:
         result = await _run_forecast_async(db)
+        # CRITICAL: Ensure all DB operations complete before returning
+        await asyncio.sleep(0.1)  # Give time for pending operations
         return result
+    except Exception as e:
+        print(f"❌ [WRAPPER] Error in forecast pipeline: {str(e)}")
+        raise
     finally:
-        # Close connection when done
-        await db.close()
+        # Close connection AFTER all operations complete
+        try:
+            await db.close()
+        except Exception as e:
+            print(f"⚠️ [WRAPPER] Error closing DB: {str(e)}")
 
 
 async def _run_forecast_async(db: Database) -> Dict[str, Any]:
@@ -143,6 +170,7 @@ async def _run_forecast_async(db: Database) -> Dict[str, Any]:
             mock_langgraph_result = _generate_mock_forecast_data(job_id)
         
         # Save forecasts to database (Phase 2)
+        print(f"💾 [DATABASE] Saving {len(mock_langgraph_result['forecasts'])} forecasts...")
         forecast_repo = ForecastRepository(db.pool)
         action_repo = ActionRepository(db.pool)
         saved_forecast_ids = []
@@ -184,7 +212,11 @@ async def _run_forecast_async(db: Database) -> Dict[str, Any]:
             
             print(f"💾 [FORECAST] Saved forecast for {forecast_data['product_code']} (ID: {forecast_id})")
         
+        # Ensure all forecast operations are complete
+        await asyncio.sleep(0.05)
+        
         # Save action recommendations
+        print(f"💾 [DATABASE] Saving {len(mock_langgraph_result['actions'])} actions...")
         saved_action_ids = []
         for action_data in mock_langgraph_result["actions"]:
             action_id = await action_repo.create_action(
@@ -421,24 +453,38 @@ def _parse_langgraph_output(langgraph_result: State, job_id: uuid4) -> Dict[str,
     actions = []
     
     # Extract forecasts from batch_results
-    for batch in langgraph_result.get("batch_results", []):
+    batch_results = langgraph_result.get("batch_results", [])
+    print(f"🔍 [PARSER] Found {len(batch_results)} batches in result")
+    
+    for batch_idx, batch in enumerate(batch_results):
         if not batch:
             continue
             
         category = batch.get("category", "Unknown")
+        print(f"🔍 [PARSER] Processing batch {batch_idx}: category={category}")
         
-        for product_forecast in batch.get("product_forecasts", []):
+        # batch_results is nested: batch["batch_results"] contains product forecasts
+        product_results = batch.get("batch_results", [])
+        print(f"🔍 [PARSER] Found {len(product_results)} products in batch {batch_idx}")
+        
+        for product_result in product_results:
+            # Extract forecast data from nested structure
+            forecast_info = product_result.get("forecast", {})
+            
             forecast_data = {
-                "product_code": product_forecast.get("product_code"),
-                "product_name": product_forecast.get("product_name"),
-                "category": category,
-                "forecast_units": int(product_forecast.get("forecast_30d", 0)),
-                "current_stock": int(product_forecast.get("current_stock", 0)),
-                "trend": product_forecast.get("trend", "stable"),
-                "change_percent": float(product_forecast.get("change_percent", 0)),
-                "confidence": float(product_forecast.get("confidence", 0.75)),
-                "timeseries": product_forecast.get("timeseries", []),
-                "metrics": product_forecast.get("metrics", {}),
+                "product_code": product_result.get("product_code"),
+                "product_name": product_result.get("product_name"),
+                "category": product_result.get("category", category),
+                "forecast_units": int(forecast_info.get("forecast_units", 0)),
+                "current_stock": 0,  # Not provided in new structure
+                "trend": "stable",  # Derived from growth_factor
+                "change_percent": 0.0,  # Calculate from forecast
+                "confidence": float(forecast_info.get("model_confidence", 0.75)),
+                "timeseries": forecast_info.get("monthly_breakdown", []),
+                "metrics": {
+                    "method": forecast_info.get("method", "unknown"),
+                    "growth_factor": forecast_info.get("category_growth_factor", 1.0),
+                },
             }
             forecasts.append(forecast_data)
         

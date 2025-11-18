@@ -82,12 +82,12 @@ class ActionRepository:
         """Get active action recommendations with optional filters."""
         query = """
             SELECT 
-                id, forecast_id, action_type, category, title, description,
-                priority, affected_products, expected_impact, estimated_cost,
-                action_items, deadline, assigned_to, status, confidence_score,
-                related_risks, created_at
-            FROM active_actions
-            WHERE 1=1
+                id, priority, category, title, description,
+                impact, estimated_cost, deadline, 
+                affected_products, action_items, status, created_at
+            FROM action_recommendations
+            WHERE status IN ('pending', 'in_progress', 'snoozed')
+                AND (snoozed_until IS NULL OR snoozed_until < CURRENT_TIMESTAMP)
         """
         params = []
         param_count = 1
@@ -107,7 +107,16 @@ class ActionRepository:
             params.append(status)
             param_count += 1
 
-        query += f" LIMIT ${param_count}"
+        query += f"""
+            ORDER BY 
+                CASE priority
+                    WHEN 'high' THEN 1
+                    WHEN 'medium' THEN 2
+                    WHEN 'low' THEN 3
+                END,
+                deadline ASC NULLS LAST
+            LIMIT ${param_count}
+        """
         params.append(limit)
 
         async with self.pool.acquire() as conn:

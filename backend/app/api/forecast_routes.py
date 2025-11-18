@@ -72,10 +72,25 @@ async def get_latest_forecasts(
                 # Get metrics for this forecast
                 metrics = await forecast_repo.get_metrics(forecast["id"])
                 
+                # Format timeseries for this product
+                product_timeseries = [
+                    {
+                        "date": ts["date"].isoformat(),
+                        "weekLabel": f"T{idx + 1}",
+                        "week": f"Tuần {idx + 1}",
+                        "actual": ts["actual"],
+                        "forecast": ts["forecast"],
+                        "upperBound": ts["upper_bound"],
+                        "lowerBound": ts["lower_bound"],
+                    }
+                    for idx, ts in enumerate(timeseries)
+                ]
+                
                 product = {
                     "product_id": str(forecast["id"]),
                     "product_code": forecast["product_code"],
                     "product_name": forecast["product_name"],
+                    "name": forecast["product_name"],  # Alias for frontend
                     "category": forecast["category"],
                     "forecast_units": forecast["forecast_units"],
                     "current_stock": forecast["current_stock"],
@@ -84,6 +99,7 @@ async def get_latest_forecasts(
                     "confidence": forecast["confidence"],
                     "forecast_horizon": forecast["forecast_horizon"],
                     "accuracy": metrics.get("r_squared") if metrics else None,
+                    "timeSeries": product_timeseries,  # Add timeSeries to each product
                 }
                 products.append(product)
                 
@@ -130,7 +146,16 @@ async def get_latest_forecasts(
     
     # Fallback to mock data (Phase 1 behavior)
     products = _generate_mock_products(limit, category, product_codes)
-    time_series = _generate_time_series_data()
+    
+    # Generate aggregate time series (sum of all products)
+    time_series = _generate_weekly_timeseries_for_product(
+        base_value=2650,  # Aggregate base ~sum of all products
+        trend_direction='up',
+        seasonal_strength=0.15,
+        volatility=0.10,
+        growth_rate=0.022
+    )
+    
     heatmap = _generate_heatmap_data()
     metrics = _calculate_forecast_metrics()
     
@@ -198,12 +223,11 @@ async def get_action_recommendations(
                     "category": action["category"],
                     "title": action["title"],
                     "description": action["description"],
-                    "impact": action["expected_impact"],
+                    "impact": action["impact"],  # Fixed: use 'impact' not 'expected_impact'
                     "estimatedCost": action["estimated_cost"],
                     "deadline": action["deadline"].isoformat() if action["deadline"] else None,
                     "actionItems": action["action_items"] or [],
                     "affectedProducts": action["affected_products"],
-                    "confidence": action["confidence_score"],
                     "status": action["status"],
                 }
                 for action in actions
@@ -412,7 +436,7 @@ async def get_risk_news(
 
 
 def _generate_mock_products(limit: int, category: str | None, product_codes: str | None) -> List[Dict[str, Any]]:
-    """Generate mock product forecast data."""
+    """Generate mock product forecast data with individual time series."""
     all_products = [
         {
             "product_id": "BUGI-IRIDIUM-VCH20",
@@ -424,7 +448,15 @@ def _generate_mock_products(limit: int, category: str | None, product_codes: str
             "trend": "up",
             "change_percent": 12.5,
             "confidence": 94.2,
+            "forecast_horizon": "60_days",
             "last_updated": datetime.utcnow().isoformat(),
+            "timeSeries": _generate_weekly_timeseries_for_product(
+                base_value=750,
+                trend_direction='up',
+                seasonal_strength=0.12,
+                volatility=0.08,
+                growth_rate=0.025
+            )
         },
         {
             "product_id": "BUGI-PLATINUM-VK20",
@@ -436,7 +468,15 @@ def _generate_mock_products(limit: int, category: str | None, product_codes: str
             "trend": "up",
             "change_percent": 8.3,
             "confidence": 91.8,
+            "forecast_horizon": "60_days",
             "last_updated": datetime.utcnow().isoformat(),
+            "timeSeries": _generate_weekly_timeseries_for_product(
+                base_value=550,
+                trend_direction='up',
+                seasonal_strength=0.18,
+                volatility=0.12,
+                growth_rate=0.03
+            )
         },
         {
             "product_id": "DIEU-HOA-COMPRESSOR-447220",
@@ -445,10 +485,18 @@ def _generate_mock_products(limit: int, category: str | None, product_codes: str
             "category": "AC_System",
             "forecast_units": 18000,
             "current_stock": 12400,
-            "trend": "down",
-            "change_percent": -5.2,
+            "trend": "up",
+            "change_percent": 16.7,
             "confidence": 88.5,
+            "forecast_horizon": "60_days",
             "last_updated": datetime.utcnow().isoformat(),
+            "timeSeries": _generate_weekly_timeseries_for_product(
+                base_value=480,
+                trend_direction='up',
+                seasonal_strength=0.25,  # High seasonality for AC
+                volatility=0.15,
+                growth_rate=0.035
+            )
         },
         {
             "product_id": "LOC-GIO-DEN-5656",
@@ -460,7 +508,15 @@ def _generate_mock_products(limit: int, category: str | None, product_codes: str
             "trend": "stable",
             "change_percent": 1.2,
             "confidence": 92.3,
+            "forecast_horizon": "60_days",
             "last_updated": datetime.utcnow().isoformat(),
+            "timeSeries": _generate_weekly_timeseries_for_product(
+                base_value=800,
+                trend_direction='stable',
+                seasonal_strength=0.10,
+                volatility=0.08,
+                growth_rate=0.01
+            )
         },
         {
             "product_id": "CAM-BIEN-OXY-234-9065",
@@ -472,7 +528,15 @@ def _generate_mock_products(limit: int, category: str | None, product_codes: str
             "trend": "up",
             "change_percent": 15.8,
             "confidence": 89.7,
+            "forecast_horizon": "60_days",
             "last_updated": datetime.utcnow().isoformat(),
+            "timeSeries": _generate_weekly_timeseries_for_product(
+                base_value=375,
+                trend_direction='up',
+                seasonal_strength=0.15,
+                volatility=0.11,
+                growth_rate=0.028
+            )
         },
     ]
     
@@ -488,17 +552,20 @@ def _generate_mock_products(limit: int, category: str | None, product_codes: str
 
 
 def _generate_time_series_data() -> List[Dict[str, Any]]:
-    """Generate time series forecast data for charts."""
+    """Generate time series forecast data for charts (WEEKLY format)."""
     dates = []
     today = datetime.utcnow()
     
-    # 30 days historical + 60 days forecast
-    for i in range(-30, 60):
-        date = today + timedelta(days=i)
-        base_value = 5000 + (i / 5) * 100  # Slight upward trend
+    # 12 weeks historical + 8 weeks forecast
+    for i in range(-12, 8):
+        date = today + timedelta(weeks=i)
+        week_number = i + 13  # Week 1 to 20
+        base_value = 5000 + (i / 2) * 100  # Slight upward trend
         
         dates.append({
             "date": date.strftime("%Y-%m-%d"),
+            "week": f"Tuần {week_number}",
+            "weekLabel": f"T{week_number}",
             "actual": round(base_value + ((-1) ** i) * 300) if i < 0 else None,
             "forecast": round(base_value) if i >= 0 else None,
             "upperBound": round(base_value * 1.15) if i >= 0 else None,
@@ -507,6 +574,84 @@ def _generate_time_series_data() -> List[Dict[str, Any]]:
         })
     
     return dates
+
+
+def _generate_weekly_timeseries_for_product(
+    base_value: int,
+    historical_weeks: int = 12,
+    forecast_weeks: int = 8,
+    trend_direction: str = 'up',
+    seasonal_strength: float = 0.15,
+    volatility: float = 0.1,
+    growth_rate: float = 0.02
+) -> List[Dict[str, Any]]:
+    """Generate weekly time series for individual product."""
+    import random
+    import math
+    
+    data = []
+    today = datetime.utcnow()
+    
+    # Historical data
+    for i in range(-historical_weeks, 0):
+        date = today + timedelta(weeks=i)
+        week_number = historical_weeks + i + 1
+        
+        # Seasonal variation
+        seasonal_factor = 1 + math.sin((i / 4) + (base_value % 10)) * seasonal_strength
+        
+        # Trend factor
+        trend_factor = 1
+        if trend_direction == 'up':
+            trend_factor = 1 + ((-i / historical_weeks) * growth_rate * 3)
+        elif trend_direction == 'down':
+            trend_factor = 1 - ((-i / historical_weeks) * growth_rate * 2)
+        
+        actual = round(
+            base_value * seasonal_factor * trend_factor +
+            random.randint(int(-base_value * volatility), int(base_value * volatility))
+        )
+        
+        data.append({
+            "date": date.strftime("%Y-%m-%d"),
+            "week": f"Tuần {week_number}",
+            "weekLabel": f"T{week_number}",
+            "actual": actual,
+            "forecast": None,
+            "upperBound": None,
+            "lowerBound": None,
+            "isHistorical": True
+        })
+    
+    # Forecast data
+    last_actual = data[-1]["actual"] if data else base_value
+    for i in range(forecast_weeks):
+        date = today + timedelta(weeks=i)
+        week_number = historical_weeks + i + 1
+        
+        trend_factor = 1
+        if trend_direction == 'up':
+            trend_factor = 1 + (i * growth_rate)
+        elif trend_direction == 'down':
+            trend_factor = 1 - (i * growth_rate * 0.8)
+        else:
+            trend_factor = 1 + (i * growth_rate * 0.3)
+        
+        forecast = round(last_actual * trend_factor)
+        confidence_width = 0.08 if trend_direction == 'stable' else 0.12
+        
+        data.append({
+            "date": date.strftime("%Y-%m-%d"),
+            "week": f"Tuần {week_number}",
+            "weekLabel": f"T{week_number}",
+            "actual": None,
+            "forecast": forecast,
+            "upperBound": round(forecast * (1 + confidence_width)),
+            "lowerBound": round(forecast * (1 - confidence_width)),
+            "isHistorical": False
+        })
+    
+    return data
 
 
 def _generate_heatmap_data() -> List[Dict[str, Any]]:

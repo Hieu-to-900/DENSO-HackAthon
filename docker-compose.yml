@@ -17,6 +17,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
       - ./backend/database/phase2_migration.sql:/docker-entrypoint-initdb.d/02_phase2_migration.sql
+      - ./backend/database/action_management_migration.sql:/docker-entrypoint-initdb.d/03_action_management_migration.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U denso_user -d denso_forecast"]
       interval: 10s

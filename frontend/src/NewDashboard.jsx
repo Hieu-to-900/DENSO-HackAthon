@@ -64,7 +64,9 @@ function NewDashboard() {
     newsSource: riskNewsData ? '✅ API' : '⚠️ Mock',
     forecastLoading,
     actionsLoading,
-    riskLoading
+    riskLoading,
+    forecastTimeSeries: forecast?.timeSeries?.length || 0,
+    forecastTimeSeriesSample: forecast?.timeSeries?.[0]
   });
 
   const handleFilterChange = (newFilters) => {

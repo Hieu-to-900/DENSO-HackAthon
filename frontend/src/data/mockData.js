@@ -18,6 +18,86 @@ const generateDates = (days) => {
 // Helper to generate random number
 const random = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
+// Helper to generate weekly time series data for products
+const generateWeeklyTimeSeries = (baseValue, historicalWeeks = 12, forecastWeeks = 8, options = {}) => {
+  const {
+    trendDirection = 'up',    // 'up', 'down', 'stable'
+    seasonalStrength = 0.15,  // 0-1, độ mạnh của biến động mùa vụ
+    volatility = 0.1,         // 0-1, độ biến động ngẫu nhiên
+    growthRate = 0.02         // tỷ lệ tăng trưởng dự báo
+  } = options;
+  
+  const data = [];
+  const today = new Date();
+  
+  // Historical data (past 12 weeks = ~3 months)
+  for (let i = -historicalWeeks; i < 0; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + (i * 7)); // Weekly intervals
+    
+    // Seasonal variation với pattern khác nhau
+    const seasonalFactor = 1 + Math.sin((i / 4) + (baseValue % 10)) * seasonalStrength;
+    
+    // Trend factor cho historical data
+    let trendFactor = 1;
+    if (trendDirection === 'up') {
+      trendFactor = 1 + ((-i / historicalWeeks) * growthRate * 3); // Tăng dần về hiện tại
+    } else if (trendDirection === 'down') {
+      trendFactor = 1 - ((-i / historicalWeeks) * growthRate * 2);
+    }
+    
+    const actual = Math.round(
+      baseValue * seasonalFactor * trendFactor + 
+      random(-baseValue * volatility, baseValue * volatility)
+    );
+    
+    const weekNumber = historicalWeeks + i + 1;
+    data.push({
+      date: date.toISOString().split('T')[0],
+      week: `Tuần ${weekNumber}`,
+      weekLabel: `T${weekNumber}`,
+      actual: actual,
+      forecast: null,
+      upperBound: null,
+      lowerBound: null,
+      isHistorical: true
+    });
+  }
+  
+  // Forecast data (next 8 weeks = ~2 months)
+  const lastActual = data[data.length - 1].actual;
+  for (let i = 0; i < forecastWeeks; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + (i * 7));
+    
+    let trendFactor = 1;
+    if (trendDirection === 'up') {
+      trendFactor = 1 + (i * growthRate);
+    } else if (trendDirection === 'down') {
+      trendFactor = 1 - (i * growthRate * 0.8);
+    } else {
+      trendFactor = 1 + (i * growthRate * 0.3); // Stable với tăng nhẹ
+    }
+    
+    const forecast = Math.round(lastActual * trendFactor);
+    const confidenceWidth = trendDirection === 'stable' ? 0.08 : 0.12;
+    
+    const weekNumber = historicalWeeks + i + 1;
+    data.push({
+      date: date.toISOString().split('T')[0],
+      week: `Tuần ${weekNumber}`,
+      weekLabel: `T${weekNumber}`,
+      actual: null,
+      forecast: forecast,
+      upperBound: Math.round(forecast * (1 + confidenceWidth)),
+      lowerBound: Math.round(forecast * (1 - confidenceWidth)),
+      isHistorical: false
+    });
+  }
+  
+  return data;
+};
+
 // ========== TIER 1: KPI Overview Data ==========
 export const mockKPIs = [
   {
@@ -79,23 +159,15 @@ export const mockKPIs = [
 
 // ========== TIER 2: Demand Forecasting Data ==========
 export const mockForecastData = {
-  // Time series data for main chart
-  timeSeries: generateDates(90).map((date, i) => {
-    const baseValue = 5000 + Math.sin(i / 10) * 1000;
-    const actual = i < 30 ? baseValue + random(-300, 300) : null;
-    const forecast = i >= 30 ? baseValue + random(-200, 200) : null;
-    
-    return {
-      date,
-      actual,
-      forecast,
-      upperBound: forecast ? forecast * 1.15 : null,
-      lowerBound: forecast ? forecast * 0.85 : null,
-      isHistorical: i < 30
-    };
+  // Time series data for main chart (aggregate view - ALSO WEEKLY)
+  timeSeries: generateWeeklyTimeSeries(2650, 12, 8, {
+    trendDirection: 'up',
+    seasonalStrength: 0.15,
+    volatility: 0.10,
+    growthRate: 0.022
   }),
   
-  // Products breakdown
+  // Products breakdown with individual time series
   productBreakdown: [
     {
       product_id: 'BUGI-IRIDIUM-VCH20',
@@ -105,7 +177,13 @@ export const mockForecastData = {
       change: 12.3,
       trend: 'up',
       confidence: 95,
-      risk: 'Low'
+      risk: 'Low',
+      timeSeries: generateWeeklyTimeSeries(750, 12, 8, {
+        trendDirection: 'up',
+        seasonalStrength: 0.12,
+        volatility: 0.08,
+        growthRate: 0.025
+      })
     },
     {
       product_id: 'BUGI-PLATIN-PK16TT',
@@ -115,7 +193,13 @@ export const mockForecastData = {
       change: 14.3,
       trend: 'up',
       confidence: 94,
-      risk: 'Low'
+      risk: 'Low',
+      timeSeries: generateWeeklyTimeSeries(550, 12, 8, {
+        trendDirection: 'up',
+        seasonalStrength: 0.18,
+        volatility: 0.12,
+        growthRate: 0.03
+      })
     },
     {
       product_id: 'AC-COMPRESSOR-6SEU14C',
@@ -125,7 +209,13 @@ export const mockForecastData = {
       change: 16.7,
       trend: 'up',
       confidence: 92,
-      risk: 'Medium'
+      risk: 'Medium',
+      timeSeries: generateWeeklyTimeSeries(480, 12, 8, {
+        trendDirection: 'up',
+        seasonalStrength: 0.25, // Mùa vụ mạnh (điều hòa)
+        volatility: 0.15,
+        growthRate: 0.035
+      })
     },
     {
       product_id: 'AC-EVAPORATOR-CORE',
@@ -135,7 +225,13 @@ export const mockForecastData = {
       change: 10.0,
       trend: 'up',
       confidence: 95,
-      risk: 'Low'
+      risk: 'Low',
+      timeSeries: generateWeeklyTimeSeries(380, 12, 8, {
+        trendDirection: 'stable',
+        seasonalStrength: 0.20,
+        volatility: 0.10,
+        growthRate: 0.015
+      })
     },
     {
       product_id: 'AC-CONDENSER-CORE',
@@ -145,7 +241,13 @@ export const mockForecastData = {
       change: 6.9,
       trend: 'up',
       confidence: 96,
-      risk: 'Low'
+      risk: 'Low',
+      timeSeries: generateWeeklyTimeSeries(360, 12, 8, {
+        trendDirection: 'stable',
+        seasonalStrength: 0.15,
+        volatility: 0.08,
+        growthRate: 0.012
+      })
     }
   ],
   

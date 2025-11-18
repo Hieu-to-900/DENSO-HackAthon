@@ -1,0 +1,470 @@
+.action-progress-tracker {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Summary Cards */
+.progress-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.summary-card {
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.summary-card.total {
+  cursor: default;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #3b82f6;
+}
+
+.summary-card:not(.total):hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.summary-card.active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.summary-card.pending:hover,
+.summary-card.pending.active {
+  border-color: #6b7280;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+.summary-card.in-progress:hover,
+.summary-card.in-progress.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.summary-card.completed:hover,
+.summary-card.completed.active {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+.summary-card.overdue {
+  border-color: #ef4444;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+.card-icon {
+  font-size: 32px;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.card-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Overall Progress Section */
+.overall-progress-section {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.progress-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.view-all-button {
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-all-button:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.progress-visualization {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  align-items: center;
+}
+
+/* Progress Circle */
+.progress-circle-container {
+  position: relative;
+  width: 180px;
+  height: 180px;
+}
+
+.progress-circle {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.progress-circle-bg {
+  fill: none;
+  stroke: #e5e7eb;
+  stroke-width: 8;
+}
+
+.progress-circle-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 339.292; /* 2 * PI * 54 */
+  transition: stroke-dashoffset 1s ease, stroke 0.3s ease;
+}
+
+.progress-circle-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.progress-percent {
+  font-size: 36px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+}
+
+.progress-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* Progress Breakdown */
+.progress-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.breakdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.breakdown-bar {
+  height: 24px;
+  background: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.breakdown-fill {
+  height: 100%;
+  transition: width 0.8s ease;
+  border-radius: 12px;
+}
+
+.breakdown-fill.completed {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.breakdown-fill.in-progress {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.breakdown-fill.pending {
+  background: linear-gradient(90deg, #9ca3af 0%, #6b7280 100%);
+}
+
+.breakdown-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.breakdown-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.breakdown-dot.completed {
+  background: #10b981;
+}
+
+.breakdown-dot.in-progress {
+  background: #3b82f6;
+}
+
+.breakdown-dot.pending {
+  background: #6b7280;
+}
+
+/* Status Pipeline */
+.status-pipeline {
+  margin-bottom: 32px;
+}
+
+.status-pipeline h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.pipeline-flow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+}
+
+.pipeline-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.stage-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
+}
+
+.stage-badge:hover {
+  transform: scale(1.1);
+}
+
+.stage-badge.pending {
+  border: 3px solid #6b7280;
+}
+
+.stage-badge.in-progress {
+  border: 3px solid #3b82f6;
+}
+
+.stage-badge.completed {
+  border: 3px solid #10b981;
+}
+
+.stage-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.stage-count {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.pipeline-arrow {
+  font-size: 24px;
+  color: #d1d5db;
+  margin: 0 16px;
+}
+
+/* Team Performance */
+.team-performance {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.team-performance h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.team-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.team-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.team-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.team-bar-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.team-bar-rate {
+  font-size: 14px;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.team-bar {
+  height: 32px;
+  background: #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+}
+
+.team-bar-fill {
+  height: 100%;
+  transition: width 0.8s ease;
+}
+
+.team-bar-fill.completed {
+  background: #10b981;
+}
+
+.team-bar-fill.in-progress {
+  background: #3b82f6;
+}
+
+.team-bar-fill.pending {
+  background: #9ca3af;
+}
+
+.team-bar-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.team-bar-stats span {
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .progress-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .progress-visualization {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .progress-circle-container {
+    margin: 0 auto;
+  }
+
+  .pipeline-flow {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .pipeline-arrow {
+    transform: rotate(90deg);
+    margin: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .action-progress-tracker {
+    padding: 16px;
+  }
+
+  .progress-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-card {
+    padding: 16px;
+  }
+
+  .card-value {
+    font-size: 24px;
+  }
+
+  .overall-progress-section,
+  .team-performance {
+    padding: 16px;
+  }
+
+  .progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .view-all-button {
+    width: 100%;
+  }
+}

@@ -79,10 +79,9 @@ class ForecastRepository:
         """Get latest forecasts with optional filters."""
         query = """
             SELECT 
-                id, product_id, product_code, product_name, category,
+                id, product_code, product_code as product_id, product_name, category,
                 forecast_units, current_stock, trend, change_percent, confidence,
-                forecast_horizon, forecast_start_date, forecast_end_date,
-                created_at, updated_at
+                forecast_horizon, created_at
             FROM latest_forecasts
             WHERE 1=1
         """

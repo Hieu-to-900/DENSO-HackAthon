@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.action_routes import router as action_router
 from app.api.alert_routes import router as alert_router
 from app.api.forecast_routes import router as forecast_router
 from app.api.job_routes import router as job_router
@@ -45,6 +46,7 @@ app.include_router(router, prefix="/api", tags=["api"])
 app.include_router(alert_router, prefix="/api", tags=["alerts"])
 app.include_router(forecast_router, prefix="/api", tags=["forecasts"])
 app.include_router(job_router, prefix="/api", tags=["jobs"])
+app.include_router(action_router, tags=["actions"])  # Already has /api/actions prefix
 
 
 @app.get("/")

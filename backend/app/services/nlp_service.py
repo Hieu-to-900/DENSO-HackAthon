@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 try:
     from underthesea import word_tokenize, pos_tag, sentiment
 except ImportError:
-    print("⚠️ underthesea not installed, NLP features disabled")
+    # underthesea not installed, NLP features disabled
     word_tokenize = None
     pos_tag = None
     sentiment = None
@@ -48,7 +48,7 @@ class NLPService:
             List of keywords with frequency and scores
         """
         if not word_tokenize or not pos_tag:
-            print("⚠️ underthesea not available, returning empty keywords")
+            # underthesea not available, returning empty keywords
             return []
 
         try:
@@ -99,7 +99,7 @@ class NLPService:
             Dictionary with sentiment label and confidence
         """
         if not sentiment:
-            print("⚠️ underthesea sentiment analysis not available")
+            # underthesea sentiment analysis not available
             return {"sentiment": "neutral", "confidence": 0.5}
 
         try:
@@ -118,7 +118,7 @@ class NLPService:
             }
             
         except Exception as e:
-            print(f"❌ Sentiment analysis failed: {str(e)}")
+            # Sentiment analysis failed - fallback to neutral
             return {"sentiment": "neutral", "confidence": 0.5}
 
     def extract_keywords_with_sentiment(

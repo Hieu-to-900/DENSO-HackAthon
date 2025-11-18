@@ -106,12 +106,37 @@ You can run both services simultaneously:
 
 **Terminal 1 (Backend):**
 ```bash
-cd backend && uvicorn app.main:app --reload --port 8000
+conda activate LangGraph
+cd backend
+uvicorn app.main:app --reload --port 8000
 ```
 
 **Terminal 2 (Frontend):**
 ```bash
-cd frontend && npm run dev
+conda activate LangGraph
+cd frontend
+npm run dev
+```
+
+**Terminal 3 (Celery):**
+```bash
+conda activate LangGraph
+cd backend 
+celery -A app.celery_app worker --loglevel=info --pool=solo
+```
+
+**Terminal 4 (LangGraph):**
+```bash
+conda activate LangGraph
+langgraph dev
+```
+
+```bash
+https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
+http://localhost:3000/
+http://localhost:8000/docs#/jobs
+http://localhost:5050/browser/
+admin123
 ```
 
 ### Using the Dashboard
