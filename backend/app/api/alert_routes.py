@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -128,6 +128,29 @@ async def dismiss_alert(
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     return alert
+
+@router.post("/demo/yokohama-hagibis")
+async def demo_yokohama_hagibis():
+    """
+    Demo alert: Tắc nghẽn cảng Yokohama do bão Hagibis.
+    Không ghi vào DB, chỉ trả về payload giả để frontend test.
+    """
+    return {
+        "id": str(uuid4()),
+        "title": "Tắc nghẽn cảng Yokohama do bão Hagibis",
+        "message": (
+            "Bão Hagibis gây tắc nghẽn nghiêm trọng tại cảng Yokohama, "
+            "ảnh hưởng lịch trình xuất khẩu phụ tùng ô tô."
+        ),
+        "severity": "high",
+        "alert_type": "logistics",
+        "source": "Nikkei Asia",
+        "risk_score": 0.85,
+        "tags": ["bão", "cảng biển", "logistics", "Nhật Bản"],
+        "created_at": datetime.utcnow().isoformat(),
+        "read": False,
+        "dismissed": False,
+    }
 
 
 @router.delete("/cleanup")

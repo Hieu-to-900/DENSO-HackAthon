@@ -23,21 +23,6 @@ def create_mock_news_data():
     
     news_articles = [
         {
-            "id": "news-001",
-            "document": "Bão Hagibis gây tắc nghẽn nghiêm trọng tại cảng Yokohama, ảnh hưởng đến lịch trình xuất khẩu phụ tùng ô tô sang thị trường Đông Nam Á. Dự kiến delay 7-10 ngày cho các lô hàng spark plugs và AC compressors.",
-            "metadata": {
-                "title": "Tắc nghẽn cảng Yokohama do bão Hagibis",
-                "source": "Nikkei Asia",
-                "article_date": (base_date - timedelta(days=5)).isoformat(),
-                "category": "logistics",
-                "sentiment": "negative",
-                "risk_score": 0.85,
-                "related_products": ["VCH20", "VK20", "447220-1510"],
-                "tags": ["bão", "cảng biển", "logistics", "Nhật Bản"],
-                "language": "vi",
-            }
-        },
-        {
             "id": "news-002",
             "document": "Giá thép thô tại Trung Quốc tăng 8% trong tháng 11 do chính sách hạn chế sản xuất của chính phủ. Điều này tác động trực tiếp đến chi phí sản xuất AC compressor, dự kiến giảm margin 3-5% trong Q1 2025.",
             "metadata": {
