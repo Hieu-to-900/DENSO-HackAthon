@@ -11,7 +11,7 @@ from app.api.forecast_routes import router as forecast_router
 from app.api.job_routes import router as job_router
 from app.api.routes import router
 from app.database.connection import close_db, init_db
-
+from app.api.notification_routes import router as notification_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,6 +48,8 @@ app.include_router(forecast_router, prefix="/api", tags=["forecasts"])
 app.include_router(job_router, prefix="/api", tags=["jobs"])
 app.include_router(action_router, tags=["actions"])  # Already has /api/actions prefix
 
+
+app.include_router(notification_router, prefix="/api")
 
 @app.get("/")
 async def root():

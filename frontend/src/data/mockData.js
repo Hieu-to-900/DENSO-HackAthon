@@ -100,61 +100,79 @@ const generateWeeklyTimeSeries = (baseValue, historicalWeeks = 12, forecastWeeks
 
 // ========== TIER 1: KPI Overview Data ==========
 export const mockKPIs = [
-  {
-    id: 'forecast_accuracy',
-    title: 'Độ chính xác dự báo',
-    icon: '📈',
-    value: 94.2,
-    change: 2.3,
-    trend: 'up',
-    status: 'excellent'
-  },
-  {
-    id: 'demand_change',
-    title: 'Biến động nhu cầu',
-    icon: '📊',
-    value: 12.5,
-    change: -3.2,
-    trend: 'up',
-    status: 'good'
-  },
-  {
-    id: 'risk_signals',
-    title: 'Tín hiệu rủi ro',
-    icon: '🚨',
-    value: 7,
-    change: 3,
-    trend: 'up',
-    status: 'warning'
-  },
-  {
-    id: 'inventory_cover',
-    title: 'Tồn kho dự phòng',
-    icon: '📦',
-    value: 28,
-    change: -2,
-    trend: 'down',
-    status: 'good'
-  },
-  {
-    id: 'stockout_risk',
-    title: 'Rủi ro hết hàng',
-    icon: '⚠️',
-    value: 'Medium',
-    riskScore: 45,
-    change: '+5 điểm',
-    trend: 'up',
-    status: 'warning'
-  },
-  {
-    id: 'production_load',
-    title: 'Tải công suất',
-    icon: '🏭',
-    value: 87,
-    change: 8,
-    trend: 'up',
-    status: 'warning'
-  }
+   {
+      id: 'forecast_accuracy',
+      title: 'Forecast Accuracy',
+      icon: '🎯',
+      value: 89,
+      change: 4,
+      trend: 'up',
+      status: 'good'
+    },
+    {
+      id: 'demand_change',
+      title: 'Demand Change',
+      icon: '📈',
+      value: 8,
+      change: 2,
+      trend: 'up',
+      status: 'good'
+    },
+    {
+      id: 'production_load',
+      title: 'Production Load',
+      icon: '🏭',
+      value: 76,
+      change: -3,
+      trend: 'down',
+      status: 'warning'
+    },
+    {
+      id: 'inventory_cover',
+      title: 'Inventory Cover',
+      icon: '📦',
+      value: 32, // ngày tồn kho
+      change: 5,
+      trend: 'up',
+      status: 'good'
+    },
+    {
+      id: 'stockout_risk',
+      title: 'Stockout Risk (Top SKUs)',
+      icon: '⚠️',
+      value: '5 SKUs',
+      riskScore: 40, // % lấp đầy thanh risk-bar
+      change: -10,
+      trend: 'down',
+      status: 'warning'
+    },
+    {
+      id: 'service_level',
+      title: 'Service Level (OTIF)',
+      icon: '🚚',
+      value: 96,
+      change: 1,
+      trend: 'up',
+      status: 'excellent'
+    },
+    {
+      id: 'data_coverage',
+      title: 'Data Coverage (SKU-Region)',
+      icon: '🧩',
+      value: 92,
+      change: 3,
+      trend: 'up',
+      status: 'good'
+    },
+    {
+      id: 'data_latency',
+      title: 'Data Freshness',
+      icon: '⏱️',
+      value: 2, // 2 giờ từ lần ETL/forecast gần nhất
+      change: -1,
+      trend: 'down',
+      status: 'excellent'
+    }
 ];
 
 // ========== TIER 2: Demand Forecasting Data ==========
@@ -326,14 +344,14 @@ export const mockForecastData = {
 const mockNewsRisksList = [
   {
     id: 1,
-    title: 'Tắc nghẽn cảng Yokohama gây chậm trễ 48 giờ trong vận chuyển',
-    summary: 'Cảng Yokohama đang đối mặt với tình trạng quá tải nghiêm trọng, ảnh hưởng đến lịch trình sản xuất Q1/2025 cho bugi và linh kiện AC.',
+    title: 'Tắc nghẽn cảng Busan gây chậm trễ 48 giờ trong vận chuyển',
+    summary: 'Cảng Busan đang đối mặt với tình trạng quá tải nghiêm trọng, ảnh hưởng đến lịch trình sản xuất Q1/2025 cho bugi và linh kiện AC.',
     source: 'Nikkei Asia',
     date: '2025-01-15T08:30:00Z',
-    risk_score: 85,
+    risk_score: 82,
     category: 'supply_chain',
     category_name: 'Chuỗi cung ứng',
-    tags: ['vận chuyển', 'chậm trễ', 'nhật bản'],
+    tags: ['vận chuyển', 'chậm trễ', 'hàn quốc'],
     impact: 'negative',
     affected_products: ['BUGI-IRIDIUM-VCH20', 'BUGI-PLATIN-PK16TT']
   },

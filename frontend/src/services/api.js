@@ -196,3 +196,20 @@ export async function healthCheck() {
   return response.json();
 }
 
+// ========================================
+// DEMO / MOCK APIs
+// ========================================
+
+export async function triggerDemoYokohamaAlert() {
+  // Gọi tới backend mock endpoint
+  return fetchAPI('/alerts/demo/yokohama-hagibis', {
+    method: 'POST',
+  });
+}
+
+export async function sendAssignmentEmail(payload) {
+  return fetchAPI('/notifications/assignment-email', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

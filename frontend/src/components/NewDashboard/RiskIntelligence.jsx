@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import './RiskIntelligence.css';
 import './LoadingStates.css';
 
-const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
+const RiskIntelligence = ({
+  newsRisks,
+  loading,
+  error,
+  onFilterChange,
+  onNewsClick, // 🌟 NEW: callback khi click news
+}) => {
   const [selectedRisk, setSelectedRisk] = useState(null);
   const [riskThreshold, setRiskThreshold] = useState(50);
   const [daysLookback, setDaysLookback] = useState(30);
@@ -43,7 +49,10 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
           <span className="error-icon">⚠️</span>
           <h3>Không thể tải thông tin rủi ro</h3>
           <p>{error}</p>
-          <button onClick={() => window.location.reload()} className="retry-button">
+          <button
+            onClick={() => window.location.reload()}
+            className="retry-button"
+          >
             Thử lại
           </button>
         </div>
@@ -79,7 +88,7 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
     const date = new Date(dateStr);
     const now = new Date();
     const diffHours = Math.floor((now - date) / (1000 * 60 * 60));
-    
+
     if (diffHours < 24) return `${diffHours} giờ trước`;
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 7) return `${diffDays} ngày trước`;
@@ -88,20 +97,21 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
 
   const getCategoryIcon = (category) => {
     const icons = {
-      'supply_chain': '🚢',
-      'market': '📊',
-      'weather': '🌪️',
-      'competition': '⚔️',
-      'policy': '📋'
+      supply_chain: '🚢',
+      market: '📊',
+      weather: '🌪️',
+      competition: '⚔️',
+      policy: '📋',
+      logistics: '⚓️', // 🌟 cho các event kiểu cảng, shipping
     };
     return icons[category] || '📰';
   };
 
   const getImpactBadge = (impact) => {
     const badges = {
-      'positive': { label: 'Tích cực', color: '#10b981' },
-      'negative': { label: 'Tiêu cực', color: '#ef4444' },
-      'neutral': { label: 'Trung lập', color: '#6b7280' }
+      positive: { label: 'Tích cực', color: '#10b981' },
+      negative: { label: 'Tiêu cực', color: '#ef4444' },
+      neutral: { label: 'Trung lập', color: '#6b7280' },
     };
     return badges[impact] || badges.neutral;
   };
@@ -131,7 +141,7 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
               <span>100</span>
             </div>
           </div>
-          
+
           <div className="filter-group">
             <label htmlFor="days-lookback">
               Khoảng thời gian: <strong>{daysLookback} ngày</strong>
@@ -151,61 +161,86 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
           </div>
         </div>
         <div className="risk-summary">
-          <span className="risk-count">{newsRisks.news.length} tín hiệu rủi ro</span>
-          <span className="risk-period">Trong {daysLookback} ngày qua</span>
+          <span className="risk-count">
+            {newsRisks.news.length} tín hiệu rủi ro
+          </span>
+          <span className="risk-period">
+            Trong {daysLookback} ngày qua
+          </span>
         </div>
       </div>
 
       <div className="risk-content">
         <div className="news-list">
-          {newsRisks.news.map((news) => (
-            <div
-              key={news.id}
-              className={`news-card ${selectedRisk === news.id ? 'selected' : ''}`}
-              onClick={() => setSelectedRisk(news.id)}
-            >
-              <div className="news-header">
-                <span className="news-category">
-                  {getCategoryIcon(news.category)} {news.category_name}
-                </span>
-                <span
-                  className="news-risk-score"
-                  style={{ backgroundColor: getRiskColor(news.risk_score) }}
-                >
-                  {news.risk_score}
-                </span>
-              </div>
+          {newsRisks.news.map((news) => {
+            const score =
+              news.risk_score != null ? news.risk_score : news.riskScore || 0;
+            const categoryName =
+              news.category_name || news.categoryName || 'Danh mục';
 
-              <h3 className="news-title">{news.title}</h3>
-
-              <p className="news-summary">{news.summary}</p>
-
-              <div className="news-meta">
-                <span className="news-source">📰 {news.source}</span>
-                <span className="news-date">{formatDate(news.date)}</span>
-              </div>
-
-              <div className="news-tags">
-                {news.tags.map((tag, idx) => (
-                  <span key={idx} className="tag">
-                    {tag}
+            return (
+              <div
+                key={news.id}
+                className={`news-card ${
+                  selectedRisk === news.id ? 'selected' : ''
+                }`}
+                onClick={() => {
+                  setSelectedRisk(news.id);
+                  // 🌟 báo lên parent để mở popup "Đề xuất giải pháp?"
+                  if (onNewsClick) {
+                    onNewsClick(news);
+                  }
+                }}
+              >
+                <div className="news-header">
+                  <span className="news-category">
+                    {getCategoryIcon(news.category)} {categoryName}
                   </span>
-                ))}
-              </div>
+                  <span
+                    className="news-risk-score"
+                    style={{ backgroundColor: getRiskColor(score) }}
+                  >
+                    {score}
+                  </span>
+                </div>
 
-              <div className="news-impact">
-                <span
-                  className="impact-badge"
-                  style={{ color: getImpactBadge(news.impact).color }}
-                >
-                  {getImpactBadge(news.impact).label}
-                </span>
-                <span className="affected-products">
-                  Ảnh hưởng: {news.affected_products.join(', ')}
-                </span>
+                <h3 className="news-title">{news.title}</h3>
+
+                <p className="news-summary">{news.summary}</p>
+
+                <div className="news-meta">
+                  <span className="news-source">📰 {news.source}</span>
+                  <span className="news-date">
+                    {formatDate(news.date)}
+                  </span>
+                </div>
+
+                <div className="news-tags">
+                  {news.tags?.map((tag, idx) => (
+                    <span key={idx} className="tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="news-impact">
+                  <span
+                    className="impact-badge"
+                    style={{
+                      color: getImpactBadge(news.impact).color,
+                    }}
+                  >
+                    {getImpactBadge(news.impact).label}
+                  </span>
+                  {news.affected_products && (
+                    <span className="affected-products">
+                      Ảnh hưởng: {news.affected_products.join(', ')}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="risk-sidebar">
@@ -220,11 +255,13 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
                       className="timeline-fill"
                       style={{
                         width: `${(point.count / 10) * 100}%`,
-                        backgroundColor: getRiskColor(point.avg_risk)
+                        backgroundColor: getRiskColor(point.avg_risk),
                       }}
                     />
                   </div>
-                  <div className="timeline-count">{point.count} sự kiện</div>
+                  <div className="timeline-count">
+                    {point.count} sự kiện
+                  </div>
                 </div>
               ))}
             </div>
@@ -239,7 +276,7 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
                   className="keyword"
                   style={{
                     fontSize: `${12 + kw.frequency * 2}px`,
-                    opacity: 0.6 + kw.frequency * 0.4
+                    opacity: 0.6 + kw.frequency * 0.4,
                   }}
                 >
                   {kw.word}
@@ -256,7 +293,7 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
                 'Thị trường': 25,
                 'Cạnh tranh': 20,
                 'Thời tiết': 12,
-                'Chính sách': 8
+                'Chính sách': 8,
               }).map(([category, percent], idx) => (
                 <div key={idx} className="distribution-item">
                   <span className="dist-label">{category}</span>
@@ -265,7 +302,7 @@ const RiskIntelligence = ({ newsRisks, loading, error, onFilterChange }) => {
                       className="dist-bar"
                       style={{
                         width: `${percent}%`,
-                        backgroundColor: '#3b82f6'
+                        backgroundColor: '#3b82f6',
                       }}
                     />
                   </div>
